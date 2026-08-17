@@ -1,6 +1,6 @@
 ---
 name: flow-distill
-description: lionad 的知识提炼与归档流程
+description: 知识提炼与归档流程
 metadata:
   version: 0.1.0-alpha.0
 ---

@@ -1,6 +1,6 @@
 ---
 name: flow-image
-description: lionad 的图像生成与提示词流程:从描述或参考图生成/编辑图片、理想vs现实(anti-render)对比图、将图片或文本转为 AI 绘画提示词、透明背景抠图;支持 grsapi 与阿里云百炼(bl) 双 provider，按模型自动路由或 --provider 手动指定。当需要生成新图片、编辑已有图片、获取绘画提示词,或搜索找不到现成图片素材时使用。
+description: 图像生成与提示词流程:从描述或参考图生成/编辑图片、理想vs现实(anti-render)对比图、将图片或文本转为 AI 绘画提示词、透明背景抠图;支持 grsapi 与阿里云百炼(bl) 双 provider，按模型自动路由或 --provider 手动指定。当需要生成新图片、编辑已有图片、获取绘画提示词,或搜索找不到现成图片素材时使用。
 argument-hint: <description | image path> [--mode gen|prompt|edit|anti-render|transparent|batch] [--model <id>] [--provider <grsapi|bailian>] [--no-open]
 metadata:
   version: 0.1.0-alpha.0

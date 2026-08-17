@@ -1,6 +1,6 @@
 ---
 name: flow-docs
-description: lionad 与文档打交道的入口。四条分支：(1) GSD 代码库文档同步——检测 .planning/codebase/*.md 是否落后于代码，落后时调用 gsd-codebase-mapper 子代理增量更新；(2) 事实核查——对论断/文章/URL 做对抗性核查（分诊 → 多源三角测量 → 三态判定 → 报告）；(3) 源码映射——将文档大纲逐页深化为精确映射源码实现的单文件技术报告，全文 #LXX-LYY 源码锚点，脚本越界校验 + 编辑器视觉抽查双验证；(4) 项目翻译——批量就地翻译项目文档与代码为中文（scan → 分批并行子代理翻译 → 状态轮询 → 用户确认后提交打标），支持 upstream 分批 merge 对齐（tag 优先，主代理 inline 语义合并冲突）与三层术语表。当用户说「同步文档」「更新 gsd 文档」「文档过期了」「事实核查」「核查这个说法」「deep fact check」「源码映射」「doc map」「深化大纲」「翻译项目」「翻译这个仓库」「同步上游翻译」「translate project」「translating-project」「flow-docs」时触发
+description: 与文档打交道的入口。四条分支：(1) GSD 代码库文档同步——检测 .planning/codebase/*.md 是否落后于代码，落后时调用 gsd-codebase-mapper 子代理增量更新；(2) 事实核查——对论断/文章/URL 做对抗性核查（分诊 → 多源三角测量 → 三态判定 → 报告）；(3) 源码映射——将文档大纲逐页深化为精确映射源码实现的单文件技术报告，全文 #LXX-LYY 源码锚点，脚本越界校验 + 编辑器视觉抽查双验证；(4) 项目翻译——批量就地翻译项目文档与代码为中文（scan → 分批并行子代理翻译 → 状态轮询 → 用户确认后提交打标），支持 upstream 分批 merge 对齐（tag 优先，主代理 inline 语义合并冲突）与三层术语表。当用户说「同步文档」「更新 gsd 文档」「文档过期了」「事实核查」「核查这个说法」「deep fact check」「源码映射」「doc map」「深化大纲」「翻译项目」「翻译这个仓库」「同步上游翻译」「translate project」「translating-project」「flow-docs」时触发
 argument-hint: <your commands> [sync <topics> | check <claim-or-URL> | map <outline> | translate <path>] [--force] [--check-only] [--dry-run] [--tier quick|standard|deep]
 disable-model-invocation: true
 metadata:

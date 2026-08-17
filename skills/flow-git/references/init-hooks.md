@@ -164,7 +164,7 @@ pnpm typecheck
 - 分支名单：`case` 语句里的 `release|release/*|test|test/*`，按项目分支模型增删
 - 质量门禁命令与顺序：默认 `pnpm lint` → `pnpm test` → `pnpm typecheck`，按目标项目 scripts 调整（如无 `typecheck` 可换 `tsc --noEmit` 或 `nuxt typecheck`）；保持耗时升序 fail-fast
 - lint-staged glob 与命令：按技术栈调整（如 Python 项目换 `ruff check --fix`）
-- commitlint type-enum：`wip`、`cosm`、`stash` 是 lionad 风格扩展，可按团队习惯裁剪
+- commitlint type-enum：`wip`、`cosm`、`stash` 是非标准风格扩展，可按团队习惯裁剪
 - 包管理器：脚本内 `pnpm exec`，npm 项目换 `npx --no-install`
 
 ## 注意

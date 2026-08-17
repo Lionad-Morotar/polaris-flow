@@ -1,6 +1,6 @@
 ---
 name: flow-search
-description: lionad 的搜索入口。三条分支：(A) 文档溯源——为代码改动/配置项/技术决策查找官方文档依据（find-source 继任）；(B) 内容溯源——从转载/转述/截图反查一手 canonical 出处（find-original 继任）；(C) 深度研究——对宽泛主题做系统性多轮调研，三层 Ask 澄清 + 评估器-优化器循环（search-web 继任）。当用户说「溯源」「找文档出处」「这个配置官方怎么说」「这篇转载自哪里」「反查原文」「找到原始博客」「调研」「深度研究」「系统调查」「验证假设」「技术选型对比」「find-source」「find-original」「search-web」「flow-search」时触发
+description: 搜索入口。三条分支：(A) 文档溯源——为代码改动/配置项/技术决策查找官方文档依据（find-source 继任）；(B) 内容溯源——从转载/转述/截图反查一手 canonical 出处（find-original 继任）；(C) 深度研究——对宽泛主题做系统性多轮调研，三层 Ask 澄清 + 评估器-优化器循环（search-web 继任）。当用户说「溯源」「找文档出处」「这个配置官方怎么说」「这篇转载自哪里」「反查原文」「找到原始博客」「调研」「深度研究」「系统调查」「验证假设」「技术选型对比」「find-source」「find-original」「search-web」「flow-search」时触发
 argument-hint: "[docs | content | research] <目标>"
 disable-model-invocation: true
 metadata:
@@ -33,7 +33,7 @@ metadata:
 
 - **B 问 provenance（内容从哪来），flow-docs 事实核查看 truth（说法对不对）**——两者都吃 URL、都做全网多源搜索，别混用。
 - **C vs A/B**：C 是广域系统调研（无预定结论、多轮迭代求覆盖），A/B 是窄域定向溯源（有明确目标、找到即停）。
-- **C vs 内置 `deep-research`**：C 是 lionad 定制流程——三层 Ask 澄清、外部搜索工具链偏好、手动调用；通用调研需求走内置技能即可。
+- **C vs 内置 `deep-research`**：C 是定制流程——三层 Ask 澄清、外部搜索工具链偏好、手动调用；通用调研需求走内置技能即可。
 - **C vs flow-docs 事实核查**：C 无预定结论（探索性调研），核查有待审论断（对抗性审计，证伪优先）。
 - `find-skills` 是找技能不是找源头；API 用法问题直查 Context7 即可，不必走 A（A 解决的是"为什么这样配置"的依据问题）。
 

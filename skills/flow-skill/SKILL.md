@@ -1,6 +1,6 @@
 ---
 name: flow-skill
-description: lionad 的技能工程入口。分支 A：--create——从零创建新的 agent 技能：需求 gathering、结构设计（薄 SKILL.md + 渐进披露 references + 确定性 scripts）、起草、部署符号链接、评审验收（write-a-skill 方法论继任）。分支 B：--lint——校验 SKILL.md frontmatter 规范（移植 VSCode 内置校验规则：字段类型、无引号裸布尔、name 与文件夹一致、正文断链等）。当用户说「创建技能」「写个技能」「新建 skill」「构建 skill」「做个 skill」「write-a-skill」「lint 技能」「校验 skill」「skill 检查」「flow-skill」「--create」「--lint」时触发
+description: 技能工程入口。分支 A：--create——从零创建新的 agent 技能：需求 gathering、结构设计（薄 SKILL.md + 渐进披露 references + 确定性 scripts）、起草、部署符号链接、评审验收（write-a-skill 方法论继任）。分支 B：--lint——校验 SKILL.md frontmatter 规范（移植 VSCode 内置校验规则：字段类型、无引号裸布尔、name 与文件夹一致、正文断链等）。当用户说「创建技能」「写个技能」「新建 skill」「构建 skill」「做个 skill」「write-a-skill」「lint 技能」「校验 skill」「skill 检查」「flow-skill」「--create」「--lint」时触发
 argument-hint: <技能名或需求描述> [--create] | --lint <路径...> [--strict] [--json]
 disable-model-invocation: true
 metadata:
@@ -27,7 +27,7 @@ metadata:
 
 - flow-skill 解决「从零做出一个技能」；已有技能的代码质量优化走 flow-code-review。
 - 老技能退役并入属于手工流程，暂无专用模式；退役前的质量盘点可借用 flow-code-review。
-- 与官方 skill-creator 的区别：本技能是 lionad 定制流程——本地化归属决策、flow 家族薄壳范式、符号链接部署、中文触发词约定。
+- 与官方 skill-creator 的区别：本技能是定制流程——本地化归属决策、flow 家族薄壳范式、符号链接部署、中文触发词约定。
 
 ## 外部依赖入口
 

@@ -1,6 +1,6 @@
 ---
 name: flow-code
-description: lionad 的代码库元架构维护入口：--show 总结代码库近期变动，产出趋势前置、按任务分组的终端报告；--scan 全仓坏味道扫描（backup/兜底模式 + 坏味道测试），产出按运行时风险/代码卫生分轴的列表。当用户说「代码库近期干了什么」「总结近期变动」「代码库近况」「show recent」或「backup 模式」「兜底模式」「坏味道扫描」「扫一下兜底」「假测试」「坏味道测试」「低价值测试」「flow-code」时触发
+description: 代码库元架构维护入口：--show 总结代码库近期变动，产出趋势前置、按任务分组的终端报告；--scan 全仓坏味道扫描（backup/兜底模式 + 坏味道测试），产出按运行时风险/代码卫生分轴的列表。当用户说「代码库近期干了什么」「总结近期变动」「代码库近况」「show recent」或「backup 模式」「兜底模式」「坏味道扫描」「扫一下兜底」「假测试」「坏味道测试」「低价值测试」「flow-code」时触发
 argument-hint: "[--show [recent] | --scan [path]]"
 disable-model-invocation: true
 metadata:

@@ -4,7 +4,7 @@
 
 # flow-skills
 
-lionad 的北极星计划 flow 技能集合，覆盖开发、图像生成、知识提炼、北极星循环、UI 还原、教学 tour 与开发者体验等工作流，以及 git、文档、应用手册三类入口。
+为强长程能力模型设计的开发工作流集合，覆盖开发、图像生成、知识提炼、北极星循环、UI 还原、教学 tour 与开发者体验等工作流，以及 git、文档、应用手册三类入口。
 
 ## 安装
 
@@ -18,12 +18,12 @@ npx skills add -g Lionad-Morotar/flow-skills --all
 
 **技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
 
-- `/flow-dev {你的要求}` — lionad 的代码开发流程
+- `/flow-dev {你的要求}` — 代码开发流程
 - `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图
-- `/flow-distill {你的要求}` — lionad 的知识提炼与归档流程
+- `/flow-distill {你的要求}` — 知识提炼与归档流程
 - `/flow-polaris` — 在 production-ready 项目上配置 cadence 自动驱动开发循环
 - `/flow-tour {你的要求}` — 构建交互式分步教学(网站或 CodeTour)
-- `/flow-ui-ralph {你的要求}` — lionad 的 UI 还原迭代流程,支持无设计稿时先生成设计再还原
+- `/flow-ui-ralph {你的要求}` — UI 还原迭代流程,支持无设计稿时先生成设计再还原
 - `/flow-dx {你的要求}` — 优化项目开发者体验(DX)
 - `/flow-code [--show [recent]]` — 代码库元架构维护入口:--show 总结近期变动(趋势前置、按任务分组的近况报告)
 - `/flow-code-review {你的要求}` — 按 effort 档位对 diff 做多角度审查(finder → dedup/verify → sweep)

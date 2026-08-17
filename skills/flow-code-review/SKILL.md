@@ -1,6 +1,6 @@
 ---
 name: flow-code-review
-description: lionad 的代码审查流程：按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep），默认零子代理
+description: 代码审查流程：按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep），默认零子代理
 argument-hint: "[target] [--effort low|medium|high|xhigh] [--base <ref>] [--json]"
 metadata:
   version: 0.1.0-alpha.0

@@ -1,6 +1,6 @@
 ---
 name: flow-ui-ralph
-description: lionad 的 UI 还原迭代流程，通过视觉分析与浏览器验证将项目产物还原到 99% 以上
+description: UI 还原迭代流程，通过视觉分析与浏览器验证将项目产物还原到 99% 以上
 metadata:
   version: 0.1.0-alpha.0
 ---
