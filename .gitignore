@@ -21,3 +21,8 @@ skills/flow-agent/configs/*
 
 # flow-os 技能本体随仓分发；configs/ 为本机 provider 账册（真实账号名册），不随开源仓分发
 skills/flow-os/configs/
+
+# 仓级敏感词黑名单为 owner 本机私有(真实手机号/内部域名/口令,入库即公开),
+# 格式契约见 configs/secret-scan.example.txt;仅模板入库
+/configs/*
+!/configs/secret-scan.example.txt
