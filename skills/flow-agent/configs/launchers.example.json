@@ -1,0 +1,36 @@
+{
+  "_readme": [
+    "本机启动器链配置模板：复制本文件为 configs/launchers.json 后按本机环境填写。",
+    "launchers.json 为本机私有配置（含账号级 zsh 启动器函数名），已被 .gitignore 排除，不随仓分发。",
+    "每个模型的 launchers 是该模型的 zsh launcher function 名册，数组顺序即降级优先级（首选在前）。",
+    "启动器函数需在本机 zsh profile 中定义（如 ~/.zshrc），调用方统一经 zsh -c 'source ~/.zshrc; <launcher> ...' 解析。",
+    "timeout 为该模型单次审查的默认超时秒数，不应低于 1800（复杂审查实测可达 600s+）。",
+    "模型集合需与 SKILL.md / references/model-mapping.md 文档中的模型名保持一致；新增或退役模型时文档与脚本逻辑同步更新。"
+  ],
+  "models": {
+    "kimi-k3": {
+      "launchers": ["<launcher-kimi-k3-1>", "<launcher-kimi-k3-2>"],
+      "timeout": 1800
+    },
+    "kimi-k3-full": {
+      "launchers": ["<launcher-kimi-k3-full-1>"],
+      "timeout": 1800
+    },
+    "glm-5.3": {
+      "launchers": ["<launcher-glm-1>", "<launcher-glm-2>"],
+      "timeout": 1800
+    },
+    "qwen-3.8-max": {
+      "launchers": ["<launcher-qwen-1>"],
+      "timeout": 1800
+    },
+    "deepseek-v4-flash": {
+      "launchers": ["<launcher-deepseek-1>"],
+      "timeout": 1800
+    },
+    "minimax-m3": {
+      "launchers": ["<launcher-minimax-1>"],
+      "timeout": 1800
+    }
+  }
+}
