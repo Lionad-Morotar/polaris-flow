@@ -1,6 +1,6 @@
 ---
 name: flow-skill
-description: 技能工程入口。分支 A：--create——从零创建新的 agent 技能：需求 gathering、结构设计（薄 SKILL.md + 渐进披露 references + 确定性 scripts）、起草、部署符号链接、评审验收（write-a-skill 方法论继任）。分支 B：--lint——校验 SKILL.md frontmatter 规范（移植 VSCode 内置校验规则：字段类型、无引号裸布尔、name 与文件夹一致、正文断链等）。当用户说「创建技能」「写个技能」「新建 skill」「构建 skill」「做个 skill」「write-a-skill」「lint 技能」「校验 skill」「skill 检查」「flow-skill」「--create」「--lint」时触发
+description: 技能工程入口。分支 A：--create——从零创建新的 agent 技能：需求 gathering、结构设计（薄 SKILL.md + 渐进披露 references + 确定性 scripts）、起草、部署符号链接、评审验收。分支 B：--lint——校验 SKILL.md frontmatter 规范（移植 VSCode 内置校验规则：字段类型、无引号裸布尔、name 与文件夹一致、正文断链等）。当用户说「创建技能」「写个技能」「新建 skill」「构建 skill」「做个 skill」「write-a-skill」「lint 技能」「校验 skill」「skill 检查」「flow-skill」「--create」「--lint」时触发
 argument-hint: <技能名或需求描述> [--create] | --lint <路径...> [--strict] [--json]
 disable-model-invocation: true
 metadata:
@@ -33,7 +33,7 @@ metadata:
 
 - preflight.mjs — node 脚本：`node ~/.claude/skills/flow-skill/scripts/preflight.mjs --mode create [--input <技能名>] [--target <目录>]`，退出码决定流程生死
 - lint.mjs — node 脚本：`node ~/.claude/skills/flow-skill/scripts/lint.mjs <路径...> [--strict] [--json]`，退出码 0/1/3 定性校验结果
-- write-a-skill 方法论 — 文档：已并入 `references/create-skill.md`，无需再读原技能
+- 技能创建方法论 — 文档：`references/create-skill.md`
 
 ## Workflow A：创建技能
 

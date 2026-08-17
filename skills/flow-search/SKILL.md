@@ -1,6 +1,6 @@
 ---
 name: flow-search
-description: 搜索入口。三条分支：(A) 文档溯源——为代码改动/配置项/技术决策查找官方文档依据（find-source 继任）；(B) 内容溯源——从转载/转述/截图反查一手 canonical 出处（find-original 继任）；(C) 深度研究——对宽泛主题做系统性多轮调研，三层 Ask 澄清 + 评估器-优化器循环（search-web 继任）。当用户说「溯源」「找文档出处」「这个配置官方怎么说」「这篇转载自哪里」「反查原文」「找到原始博客」「调研」「深度研究」「系统调查」「验证假设」「技术选型对比」「find-source」「find-original」「search-web」「flow-search」时触发
+description: 搜索入口。三条分支：(A) 文档溯源——为代码改动/配置项/技术决策查找官方文档依据；(B) 内容溯源——从转载/转述/截图反查一手 canonical 出处；(C) 深度研究——对宽泛主题做系统性多轮调研，三层 Ask 澄清 + 评估器-优化器循环。当用户说「溯源」「找文档出处」「这个配置官方怎么说」「这篇转载自哪里」「反查原文」「找到原始博客」「调研」「深度研究」「系统调查」「验证假设」「技术选型对比」「find-source」「find-original」「search-web」「flow-search」时触发
 argument-hint: "[docs | content | research] <目标>"
 disable-model-invocation: true
 metadata:
