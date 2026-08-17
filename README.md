@@ -34,10 +34,10 @@ npx skills ls
 
 ## 快速上手
 
-装完后先拿一个零副作用的技能验证触发，比如检索知识库：
+装完后先尝试浅浅尝试一下技能触发：
 
 ```plaintext
-/flow-mem --search 任意关键词
+/flow-tour 在 /tmp/firewood 给 https://github.com/shapiro500/screentoys/blob/main/firewood/index.html 制作 web tour
 ```
 
 不确定某个技能怎么用，直接问 Agent：`help flow-dev`。本仓库不附带独立帮助手册，每个技能的用法都写在技能本体里，Agent 会读给你听。
@@ -62,8 +62,8 @@ npx skills ls
 **开发流程**
 
 - `/flow-dev {要求}`（稳定）— 开发主流程：需求拆解 → TDD Dev → Review → 验证，收尾维护记忆与文档
-- `/flow-polaris`（试验期）— 北极星循环：在 production-ready 项目上配置 cadence，自动驱动「目标分解 → slice 产出 → 合并累积 → 验收发版」
-- `/flow-ui-ralph {要求}`（试验期）— UI 还原迭代：视觉分析 + 浏览器验证，还原度收敛至 99%+；无设计稿时先生成设计再还原
+- `/flow-polaris`（试验）— 北极星循环：在 production-ready 项目上配置 cadence，自动驱动「目标分解 → slice 产出 → 合并累积 → 验收发版」
+- `/flow-ui-ralph {要求}`（试验）— UI 还原迭代：视觉分析 + 浏览器验证，还原度收敛至 99%+；无设计稿时先生成设计再还原
 - `/flow-code-review {要求}` — 基于 CC CodeReview 按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep）
 - `/flow-agent <target> --task "<模型与内容描述>"` — 外部正交审查：按 effort 启动一个或多个异模型做快速外部检查（启动器链为本机配置）
 - `/flow-dx {要求}` — 优化项目开发者体验（DX）：幂等初始化工作环境与工程基建
@@ -71,13 +71,13 @@ npx skills ls
 **生成与教学**
 
 - `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图；双 provider 自动路由
-- `/flow-tour {要求}` — 构建交互式分步教学（网站或 CodeTour）
+- `/flow-tour {要求}`（稳定） — 构建交互式分步教学（网站或 CodeTour）
 
 **知识与检索**
 
 - `/flow-distill {要求}` — 知识提炼与归档
 - `/flow-search [docs|content|research] {目标}` — 搜索三分支：技术文档溯源 / 转载反查一手出处 / 系统性深度调研
-- `/flow-mem [--learn[--ask]|--search] {来源或关键词}`（试验期）— 技术知识库维护与检索：--learn 沉淀知识（--ask 先出规划报告再落笔）/ --search 按 h4 标题或全文检索
+- `/flow-mem [--learn[--ask]|--search] {来源或关键词}`（试验）— 技术知识库维护与检索：--learn 沉淀知识（--ask 先出规划报告再落笔）/ --search 按 h4 标题或全文检索
 
 **仓库维护**
 
