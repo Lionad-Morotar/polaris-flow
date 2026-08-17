@@ -37,7 +37,7 @@ npx skills ls
 装完后先尝试浅浅尝试一下技能触发：
 
 ```plaintext
-/flow-tour 在 /tmp/firewood 给 https://github.com/shapiro500/screentoys/blob/main/firewood/index.html 制作 web tour
+/flow-dev 在 /tmp/firewood 给 https://github.com/shapiro500/screentoys/blob/main/firewood/index.html 制作 flow-tour
 ```
 
 不确定某个技能怎么用，直接问 Agent：`help flow-dev`。本仓库不附带独立帮助手册，每个技能的用法都写在技能本体里，Agent 会读给你听。
