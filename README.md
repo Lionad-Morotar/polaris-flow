@@ -19,6 +19,7 @@ npx skills add -g Lionad-Morotar/polaris-flow --all
 
 1. **技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
 2. 目前不附带帮助手册，你可以使用 “help flow-xxx” 的形式让 Agent 教你如何使用某项技能。
+3. 暂未开放：`flow-agent`（外部模型正交审查启动器）与 `flow-os`（系统环境维护）为本机私有技能，含账号配置与内部环境细节，不随开源仓分发；`flow-web` 技能本体已随仓分发，其站点 playbook 为本地积累，不随仓分发。
 
 - `/flow-dev {你的要求}` — 代码开发流程
 - `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图
