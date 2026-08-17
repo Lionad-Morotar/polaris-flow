@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="polaris-flow — 北极星指引下的 flow 技能集合" width="100%">
+  <img src="assets/share-3x4.jpg" alt="polaris-flow — 为强长程能力模型设计的开发工作流集合" width="40%">
   <center><p><bold>✨为强长程能力模型设计的开发工作流✨</bold></p></center>
 </p>
 
