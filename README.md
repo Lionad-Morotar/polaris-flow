@@ -21,7 +21,7 @@ npx skills add -g Lionad-Morotar/polaris-flow --all
 
 1. **技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
 2. 目前不附带帮助手册，你可以使用 “help flow-xxx” 的形式让 Agent 教你如何使用某项技能。
-3. 暂未开放：`flow-agent`（外部模型正交审查启动器）与 `flow-os`（系统环境维护）为本机私有技能，含账号配置与内部环境细节，不随开源仓分发；`flow-web` 技能本体已随仓分发，其站点 playbook 为本地积累，不随仓分发。
+3. 本机配置不随仓分发：`flow-agent` 的启动器链（`configs/launchers.json`）与 `flow-os` 的 provider 账册（`configs/providers.local.md`）为本机私有配置，gitignore 排除，克隆后按 `configs/launchers.example.json` 模板与手册自建；`flow-web` 的站点 playbook 同为本地积累，不随仓分发。
 
 **开发流程**
 
@@ -29,6 +29,7 @@ npx skills add -g Lionad-Morotar/polaris-flow --all
 - `/flow-polaris` — 北极星循环：在 production-ready 项目上配置 cadence，自动驱动「目标分解 → slice 产出 → 合并累积 → 验收发版」
 - `/flow-ui-ralph {要求}` — UI 还原迭代：视觉分析 + 浏览器验证，还原度收敛至 99%+；无设计稿时先生成设计再还原
 - `/flow-code-review {要求}` — 基于 CC CodeReview 按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep）
+- `/flow-agent <target> --task "<模型与内容描述>"` — 外部正交审查：按 effort 启动一个或多个异模型做快速外部检查（启动器链为本机配置）
 - `/flow-dx {要求}` — 优化项目开发者体验（DX）：幂等初始化工作环境与工程基建
 
 **生成与教学**
@@ -49,9 +50,10 @@ npx skills add -g Lionad-Morotar/polaris-flow --all
 - `/flow-code [--show|--scan]` — 代码库元架构维护：--show 近期变动报告（趋势前置、按任务分组）/ --scan 全仓坏味道扫描
 - `/flow-skill [--create|--lint] {技能名或需求}` — 技能工程：从零创建新技能（薄壳 SKILL.md + 渐进披露 + preflight 预检）/ SKILL.md 规范 lint
 
-**应用手册**
+**应用与系统**
 
 - `/flow-app [应用域] [任务]` — 应用级操作手册与任务手册，按应用域分册（含 Claude Code 会话状态跟踪与 --wait 等待）
+- `/flow-os <topic>` — 系统环境维护路由：claude-providers 多账号配置 / fix-vscode-rg 搜索防卡死 / disk-health 硬盘健康（本机账册不随仓分发）
 - `/flow-web` — 浏览器自动化：Kimi WebBridge 封装，操控真实浏览器（站点 playbook 为本地积累，不随仓分发）
 
 如果你的 IDE 不支持 SlashCommand，那么为了获得最可靠的结果，需要提示词前加上前缀，比如：
