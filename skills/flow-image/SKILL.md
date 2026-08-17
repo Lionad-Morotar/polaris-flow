@@ -84,8 +84,8 @@ metadata:
      - [ ] curl 加 `-s` 保证纯净 JSON;仅调用一次，任何错误(配额耗尽、渠道不可用、模型不存在)立即停止并报告，不重试不切换
    - [ ] **bailian**:
      - [ ] 用 `bl`，鉴权内置，**无需 source .env**
-     - [ ] gen:`bl image generate --model <model> --prompt <prompt> --size <size> --out-dir <out> --output json`（默认 sync，**不加 --async**）
-     - [ ] edit:`bl image edit --model <model> --image <path> [--image <path2>] --prompt <prompt> --out-dir <out> --output json`;本地路径直传，bl 自动上传到临时存储
+     - [ ] gen:`bl image generate --model <model> --prompt <prompt> --size <size> --watermark false --out-dir <out> --output json`（默认 sync，**不加 --async**；水印 CLI 默认 true，须显式关闭）
+     - [ ] edit:`bl image edit --model <model> --image <path> [--image <path2>] --prompt <prompt> --watermark false --out-dir <out> --output json`;本地路径直传，bl 自动上传到临时存储
      - [ ] size 取比例(1:1 / 16:9 / 3:4)或像素(W*H，如 2048*2048);transparent 的色键图也走本 provider 的 gen 命令
      - [ ] bl 调用失败(非零退出 / 鉴权失效 / 内容过滤 / 模型不可用)立即停止并报告，**不静默回退 grsapi**（跨 provider 不静默切换，与"不重试不切模型"同纪律）
 
@@ -120,7 +120,7 @@ metadata:
 - preflight 两后端都不可用:停止并报告 grsapi 与 bailian 各自的原因（配置/curl/python3 或 bl 未装/未鉴权）
 - 配置文件缺失(仅 grsapi 需要):提示创建 `~/.config/flow-image/.env` 并写入 `API_KEY=sk-...`
 - resolve 报错:`UNKNOWN_MODEL` / `UNSUPPORTED_COMBO` 向用户报错并询问（附 `suggested_provider` 若有）;`INVALID_PROVIDER` 提示仅支持 grsapi|bailian;不得自行猜测路由
-- 密钥无效 / API 调用失败 / bl 调用失败:立即停止并报告，**不切换模型、不跨 provider 静默回退、不重试**
+- 密钥无效 / API 调用失败 / bl 调用失败:立即停止并报告，**不切换模型、不跨 provider 静默回退、不重试**;grsapi 报"无效的令牌"类错误时提示更新 `~/.config/flow-image/.env` 的 API_KEY
 - JSON 验证失败:报告错误并检查文件内容，不重新调用
 - 响应无图片 / bl 的 saved 为空:提示响应中未包含图片
 - 无法打开图片:报告图片路径，用户可手动打开
