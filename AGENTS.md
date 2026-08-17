@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本仓是 lionad 的 flow 技能体系（Claude Code skills 集合），每个技能独立版本化，不使用 submodule。
+本仓是 polaris-flow 技能体系（Claude Code skills 集合），每个技能独立版本化，不使用 submodule。
 
 ## 版本约定
 

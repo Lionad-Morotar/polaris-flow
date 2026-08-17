@@ -1,22 +1,24 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="flow-skills — 北极星指引下的 flow 技能集合" width="100%">
+  <img src="assets/banner.jpg" alt="polaris-flow — 北极星指引下的 flow 技能集合" width="100%">
+  <center><p><bold>✨为强长程能力模型设计的开发工作流✨</bold></p></center>
 </p>
 
-# flow-skills
+# polaris-flow
 
 为强长程能力模型设计的开发工作流集合，覆盖开发、图像生成、知识提炼、北极星循环、UI 还原、教学 tour 与开发者体验等工作流，以及 git、文档、应用手册三类入口。
 
 ## 安装
 
 ```bash
-npx skills add -g Lionad-Morotar/flow-skills --all
+npx skills add -g Lionad-Morotar/polaris-flow --all
 ```
 
 `--all` 用于一次性安装本仓库中的全部 skill。
 
 ## 使用
 
-**技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
+1. **技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
+2. 目前不附带帮助手册，你可以使用 “help flow-xxx” 的形式让 Agent 教你如何使用某项技能。
 
 - `/flow-dev {你的要求}` — 代码开发流程
 - `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图
@@ -41,6 +43,10 @@ npx skills add -g Lionad-Morotar/flow-skills --all
 ```
 
 这会明确触发技能并确保 AI 遵循文档化的模式。如果不加前缀，技能触发可能不一致，具体取决于你的提示词与技能描述关键词的匹配程度。
+
+## 注意
+
+- 本技能专为强长程能力和强指令遵循能力的模型设计，以减少对 Dynamic Graph 和 Teams 的依赖。在小体量的模型如 deepseek-v4-flash 可能无法获得预期效果。
 
 ## 维护
 
