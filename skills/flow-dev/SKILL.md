@@ -61,7 +61,7 @@ metadata:
 - `<original-branch>`（创建 worktree 前当前分支）：`git branch --show-current`
 - `<worktree-branch>`（worktree 内部分支）：`worktree-<task-slug>`（由 `EnterWorktree` 创建）
 - `<task-slug>`（任务标识）：形如 `<YYMMDD>-<body>`：`<YYMMDD>` 为创建日期（`date +%y%m%d`），`<body>` 从任务描述提取 kebab-case，ASCII-only，最大 40 字符；产物文件直接以 `<task-slug>` 命名（日期已含在 slug 中，字典序即创建时间序，便于索引）；`--resume` 续跑沿用原 slug，不按当天日期重新生成
-- `<caller-model>`（当前主代理模型）：根据 Claude Code 实际使用的模型标识推断：`kimi` → `kimi-k3`；`glm` → `glm-5.3`；`qwen` → `qwen-3.8-max`；`deepseek` → `deepseek-v4-flash`；`minimax` → `minimax-m3`；默认 `glm-5.3`。合法枚举以 run-external-review 的 `--caller-model` choices 为唯一真源（本表是快照），漂移时按其 exit 2 报错的合法枚举修正并同步本表
+- `<caller-model>`（当前主代理模型）：根据 Claude Code 实际使用的模型标识推断：`kimi` → `kimi-k3`；`glm` → `glm-5.3`；`qwen` → `qwen-3.8-max`；`deepseek` → `deepseek-v4-flash`；`minimax` → `minimax-m3`；默认 `glm-5.3`。合法枚举以 runner 的 `--caller-model` choices 为唯一真源（本表是快照），漂移时按其 exit 2 报错的合法枚举修正并同步本表
 - `<run-dir>`（运行时状态目录）：`~/.flow-dev/runs/<task-slug>/`
 
 ## 输出模式
@@ -179,7 +179,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] 拆解文档（含自我批评三问的发现或 `clean` 裁决）写入 `<working-dir>/docs/dissections/<task-slug>.md`，设置 `outputs.dissection_path`
      - [ ] **外部审查检查点（需求树拆解，Gate）**：若未传 `--skip-review`，对拆解结果做正交审查，未经检查不得进入下游（审查纪律见 `references/dissection.md`「外部正交审查」；审查 prompt 按陈述式：陈述需求树的规模与覆盖边界——中间节点数、叶节点数、自我批评三问的裁决结果；不下达"重点关注 X"的审查指令）：
        - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-dissection', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-       - [ ] 调用 `external-review <working-dir>/docs/dissections/<task-slug>.md --task "<caller-model> 完成需求树拆解" --slug <task-slug>-dissection --caller-model <caller-model> --effort normal --target-model auto --output-dir <working-dir>/docs/reviews`
+       - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-dissection/prompt.md`，内容含任务描述（`<caller-model> 完成需求树拆解`）、被审查文件（`docs/dissections/<task-slug>.md`）与陈述式审查要求；随后同步调用 `external-review --slug <task-slug>-dissection --review-dir <working-dir>/docs/reviews/<task-slug>-dissection --prompt-file <working-dir>/docs/reviews/<task-slug>-dissection/prompt.md --caller-model <caller-model> --effort normal`
        - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
        - [ ] **若 runner 未返回 JSON，或全部 target_model 的 status 为 `failed`/`degraded`，禁止进入后续阶段**：记录 `external-review-failed` blocker，phase → `blocked`，在最终报告中显式标注；degraded 处置前先按鉴别锚点 Read 产物核实（单行阴性结论=校验器误判按通过记，空产物=真实失败，见 references/external-review-protocol.md「结果处理」）
        - [ ] 若任一模型 `status=degraded`（非全部），把降级原因写入决策台账
@@ -192,7 +192,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
    - [ ] 更新 `state.json`：phase → `thinking`
    - [ ] **外部审查检查点（UltraThoughts）**：若 `--mode full` 且未传 `--skip-review`（审查 prompt 按陈述式：陈述 UltraThoughts 已产出的目标定义性属性与可证伪验证，审查模型据此判断属性是否准确、验证是否真能证伪；不下达"重点关注 X"的审查指令）：
      - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-ultrathoughts', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-     - [ ] 调用 `external-review <working-dir>/docs/thoughts/<task-slug>.md --task "<caller-model> 完成 UltraThoughts 需求分析" --slug <task-slug>-ultrathoughts --caller-model <caller-model> --effort normal --target-model auto --output-dir <working-dir>/docs/reviews`
+     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md`，内容含任务描述（`<caller-model> 完成 UltraThoughts 需求分析`）、被审查文件（`docs/thoughts/<task-slug>.md`）与陈述式审查要求；随后同步调用 `external-review --slug <task-slug>-ultrathoughts --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md --caller-model <caller-model> --effort normal`
      - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
      - [ ] 若任一模型 `status=degraded`，把降级原因写入决策台账
    - [ ] **若 `--stop thinking`**：按「停止点」章节执行停止序列
@@ -209,7 +209,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
    - [ ] **仅 `--mode full`**：决策台账落档到 `<working-dir>/docs/decisions/<task-slug>.md`，设置 `outputs.decisions_path`
    - [ ] **外部审查检查点（grill-me）**：若 `--mode full` 且未传 `--skip-review`：
      - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-grill-me', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-     - [ ] 调用 `external-review <run-dir>/decisions.md --task "<caller-model> 完成 grill-me 自问自答" --slug <task-slug>-grill-me --caller-model <caller-model> --effort normal --target-model auto --output-dir <working-dir>/docs/reviews`
+     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md`，内容含任务描述（`<caller-model> 完成 grill-me 自问自答`）、被审查文件（`<run-dir>/decisions.md`）与陈述式审查要求；随后同步调用 `external-review --slug <task-slug>-grill-me --review-dir <working-dir>/docs/reviews/<task-slug>-grill-me --prompt-file <working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md --caller-model <caller-model> --effort normal`
      - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
      - [ ] 若任一模型 `status=degraded`，把降级原因写入决策台账
    - [ ] **仅 `--mode full`**：已读取 `~/.claude/skills/to-prd/SKILL.md`，并使用 `to-prd` 技能将 PRD 文档沉淀到 `<working-dir>/docs/plans/<task-slug>.md`；`--mode light` 跳过本项，`outputs.prd_path` 保持 `null`

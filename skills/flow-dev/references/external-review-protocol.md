@@ -28,22 +28,22 @@ Slice 轮 code-review 检查点（Step 6）**默认跳过**，满足任一触发
 
 ## 调用方式
 
-`flow-dev` 不直接调用具体模型 CLI，而是通过 runner 主动发起外部审查。调用者用 `--task` 描述自己用什么模型做了什么，runner 据此选择正交模型（与 caller 异族）并执行审查。
+`flow-dev` 不直接调用具体模型 CLI，而是通过 runner 主动发起外部审查。调用者先把任务描述（自己用什么模型做了什么）、被审查文件与审查要求写入 `prompt.md`，再以 `--prompt-file` 交给 runner；runner 据此选择正交模型（与 caller 异族）并执行审查，产物落到 `--review-dir` 下。
 
 示例（`external-review` 为 runner 的占位命令名，按实际实现替换）：
 
 ```bash
-external-review <working-dir>/docs/thoughts/<task-slug>.md \
-  --task "<caller-model> 完成 UltraThoughts 需求分析" \
+external-review \
   --slug <task-slug>-ultrathoughts \
+  --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts \
+  --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md \
   --caller-model <caller-model> \
-  --target-model auto \
-  --output-dir <working-dir>/docs/reviews
+  --effort normal
 ```
 
 调用约定：
 
-- **prompt 用陈述式，不用指令式**：`--task` 与 prompt 正文要**陈述主代理 code-review 已查的维度**（"查了排序 correctness / IR 契约 / 三入口等价性"，只列维度、陈述事实），不要下达"重点关注 X"的审查指令，也不要主动暴露自评盲区。原因：指令式 prompt 用主代理视角把审查方向框死，审查模型顺着主代理指的方向看，大概率复现主代理的盲区，"正交"名存实亡；陈述式暴露覆盖边界，审查模型自主检索 diff 与测试还原主代理真正做了什么，从覆盖之外或验证方式的缺陷切入。
+- **prompt 用陈述式，不用指令式**：任务描述与 prompt 正文要**陈述主代理 code-review 已查的维度**（"查了排序 correctness / IR 契约 / 三入口等价性"，只列维度、陈述事实），不要下达"重点关注 X"的审查指令，也不要主动暴露自评盲区。原因：指令式 prompt 用主代理视角把审查方向框死，审查模型顺着主代理指的方向看，大概率复现主代理的盲区，"正交"名存实亡；陈述式暴露覆盖边界，审查模型自主检索 diff 与测试还原主代理真正做了什么，从覆盖之外或验证方式的缺陷切入。
 - **多切片任务声明完整切片计划**：中间切片的审查 prompt 须陈述完整切片计划与后续动作（如"S3 将 bump 至 x.y.z 并 prepend CHANGELOG"、"S4 落地 /memory 页面"）。审查模型只能看到当前 diff 与 prompt，不知道后续计划时会把 bump 前的中间态当最终态审查，产出篡改已发布版本历史类的假发现（要求把 schema 迁移补进已发布的旧版 CHANGELOG、把后续切片才落地的路由报成死链）。裁决时区分两类发现：不知计划导致的假发现按「计划内中间态」驳回并记决策台账，计划无关的真发现（如版本引用表述不严谨）照常修复。
 - **审查模式默认 light**：此处的 light/deep 指 **runner 的审查深度参数**，与 flow-dev `--mode` 正交——`--mode full` 只决定启用哪些检查点，不改变单次审查深度。不传 `--deep` 即 light，runner 自动注入前言框定为快速正交 sanity check（聚焦高/中严重度发现，不逐行 review、不穷举边界、不搜索所有领域）。仅在任务涉及架构/安全/数据契约等高风险变更、且 caller 判断需要逐领域详查时才传 `--deep`。
 - **无发现输出仅一行结论**：light 前言已约束审查模型——无高/中严重度发现时整份输出仅一行「未发现高严重度问题」，不罗列已验证角度、不复述验证过程/成功路径。主代理按结论行判读，无发现即直接推进，不要求审查模型补充验证叙述。
@@ -51,12 +51,12 @@ external-review <working-dir>/docs/thoughts/<task-slug>.md \
 - `--effort` 默认 `normal`（单模型正交审查），需要多模型交叉时按映射表提升到 `max`/`ultra`。
 - **code-review 检查点后台并行（仅 Slice 轮）**：触发时以 Bash `run_in_background` 后台发起，发起点提前至 Step 5 本地 code-review 之前——prompt.md 只陈述已查维度、不含本地审查结果，两者无依赖可并行；等待期由主代理对下一 Slice 做只读调研（flow-mem 预搜索、代码与方案阅读，禁止写入），Step 6 用 TaskOutput 阻塞收集 JSON。其余三个文档检查点仍同步调用——其后无 Slice 调研对象，并行无收益。失败与降级处理语义不变。
 
-四个检查点分别使用不同的 `--task` 描述与 `--slug`：
+四个检查点分别使用不同的任务描述（写入 prompt.md）与 `--slug`：
 
-- 需求树拆解后：`--task` 示例 `"<caller-model> 完成需求树拆解"`；`--slug` 示例 `<task-slug>-dissection`
-- UltraThoughts 后：`--task` 示例 `"<caller-model> 完成 UltraThoughts 需求分析"`；`--slug` 示例 `<task-slug>-ultrathoughts`
-- grill-me 后：`--task` 示例 `"<caller-model> 完成 grill-me 自问自答"`；`--slug` 示例 `<task-slug>-grill-me`
-- code-review 后：`--task` 示例 `"<caller-model> 完成 code-review"`；`--slug` 示例 `<task-slug>-code-review`
+- 需求树拆解后：任务描述示例 `"<caller-model> 完成需求树拆解"`；`--slug` 示例 `<task-slug>-dissection`
+- UltraThoughts 后：任务描述示例 `"<caller-model> 完成 UltraThoughts 需求分析"`；`--slug` 示例 `<task-slug>-ultrathoughts`
+- grill-me 后：任务描述示例 `"<caller-model> 完成 grill-me 自问自答"`；`--slug` 示例 `<task-slug>-grill-me`
+- code-review 后：任务描述示例 `"<caller-model> 完成 code-review"`；`--slug` 示例 `<task-slug>-code-review`
 
 ## `<caller-model>` 推断
 
