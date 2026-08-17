@@ -14,12 +14,12 @@ test("仅 provider → 该 provider 默认模型", () => {
   const r = resolve({ provider: "bailian" });
   assert.equal(r.ok, true);
   assert.equal(r.provider, "bailian");
-  assert.equal(r.model, "qwen-image-2.0");
+  assert.equal(r.model, "qwen-image-3.0");
   assert.equal(r.source, "explicit-provider-default");
 });
 
 test("bl-only id 自动解析 → bailian", () => {
-  for (const m of ["qwen-image-2.0", "qwen-image-2.0-pro", "wan2.6-t2i", "wan2.7-image"]) {
+  for (const m of ["qwen-image-3.0", "qwen-image-2.0", "qwen-image-2.0-pro", "wan2.6-t2i", "wan2.7-image"]) {
     const r = resolve({ model: m });
     assert.equal(r.ok, true, m);
     assert.equal(r.provider, "bailian", m);

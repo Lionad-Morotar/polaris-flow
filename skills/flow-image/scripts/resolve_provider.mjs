@@ -11,10 +11,13 @@
  * CLI 以非零退出码（2）表示解析失败，便于 SKILL.md 用退出码分支。
  */
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
 import path from "node:path";
 
 // bailian(bl) 图像模型精确合法集——源自 bl image 命令参考，bl 仅认这几个 id 串。
+// bl 不枚举完整清单，仅 help 显示当前默认；核实默认模型用 `bl image generate --help`。
 const BAILIAN_MODELS = new Set([
+  "qwen-image-3.0",
   "qwen-image-2.0",
   "qwen-image-2.0-pro",
   "wan2.6-t2i",
@@ -72,7 +75,8 @@ const GRSAPI_MODELS = new Set([
 ]);
 
 // 各 provider 在"未指定 model"时的默认模型；零参全局默认走 grsapi 以保向后兼容。
-const DEFAULT_MODEL = { grsapi: "gpt-image-2", bailian: "qwen-image-2.0" };
+// bailian 默认须与 bl CLI 实际默认保持一致（bl image generate --help 显示的 default）。
+const DEFAULT_MODEL = { grsapi: "gpt-image-2", bailian: "qwen-image-3.0" };
 const PROVIDERS = ["grsapi", "bailian"];
 
 // 族前缀 → 偏好 provider。仅用于"两合法集都命中"的 tie-break 与"都未命中"的报错提示，
@@ -165,7 +169,7 @@ export function resolve({ model, provider } = {}) {
   }
   return error(
     "UNKNOWN_MODEL",
-    `模型 ${model} 未在已知清单中核实（族偏好 ${pref}），请用 --provider ${pref} 显式确认或更新模型清单`,
+    `模型 ${model} 未在已知清单中核实（族偏好 ${pref}），请用 --provider ${pref} 显式确认或更新模型清单${pref === "bailian" ? "；bailian 当前默认模型可用 `bl image generate --help` 核实" : ""}`,
     { suggested_provider: pref },
   );
 }
@@ -198,6 +202,10 @@ function main() {
   process.exit(result.ok ? 0 : 2);
 }
 
+// 双方经 realpathSync 归一后再比较：经符号链接路径（如 ~/.claude/skills/...）调用时，
+// argv[1] 保留链接路径而 import.meta.url 已是物理路径，直接比较有等无执行、静默退出 0。
 const isMain =
-  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  process.argv[1] &&
+  fs.realpathSync(path.resolve(process.argv[1])) ===
+    fs.realpathSync(fileURLToPath(import.meta.url));
 if (isMain) main();

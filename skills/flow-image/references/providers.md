@@ -6,7 +6,7 @@ flow-image 的图像出图支持两个执行后端：grsapi.xyz 与阿里云百�
 
 - 鉴权：grsapi 用 `~/.config/flow-image/.env` 的 API_KEY；bailian 用 `bl auth`（控制台或 --api-key）
 - 调用：grsapi 手工 `curl -s`；bailian `bl image generate` / `bl image edit`
-- 默认模型：grsapi gpt-image-2；bailian qwen-image-2.0
+- 默认模型：grsapi gpt-image-2；bailian qwen-image-3.0（与 `bl image generate --help` 显示的 CLI 实际默认保持一致）
 - 响应抽取：grsapi 需 extract_images.py（GPT/Gemini 格式分裂）；bailian 不需：--out-dir 直出 PNG
 - 原始响应：grsapi curl 的纯净 JSON；bailian stdout 纯净 JSON（banner 在 stderr）
 - 端点路由：grsapi 按速查表"支持端点"列（dall-e-3 / image-generation / gemini generateContent / mj 异步等）；bailian 由 bl 内部处理
@@ -35,7 +35,7 @@ node <skill>/scripts/resolve_provider.mjs --model <id> --provider <grsapi|bailia
 
 零参数（无 `--model` 无 `--provider`）：grsapi + gpt-image-2，保持向后兼容，重构不改变无参默认。
 
-仅 `--provider`：使用该后端默认模型（grsapi→gpt-image-2，bailian→qwen-image-2.0）。
+仅 `--provider`：使用该后端默认模型（grsapi→gpt-image-2，bailian→qwen-image-3.0）。
 
 族 → 推荐 provider（用于 tie-break 与报错建议，不单独决定路由）：
 
@@ -45,7 +45,7 @@ node <skill>/scripts/resolve_provider.mjs --model <id> --provider <grsapi|bailia
 
 ## 合法模型集
 
-bailian 精确合法集（bl image 仅认这几个 id 串）：`qwen-image-2.0`、`qwen-image-2.0-pro`、`wan2.6-t2i`、`wan2.7-image`。
+bailian 精确合法集（bl image 仅认这几个 id 串）：`qwen-image-3.0`、`qwen-image-2.0`、`qwen-image-2.0-pro`、`wan2.6-t2i`、`wan2.7-image`。bl 不枚举完整清单，help 仅显示当前默认模型；核实用 `bl image generate --help`。
 
 grsapi 精确合法集：见 `2026-06-11-grsapi-image-models.md` 速查表（46 行）。注意 grsapi 的 qwen/wan id 串带日期后缀或 -pro/-edit（如 `qwen-image-2.0-2026-03-03`、`wan2.7-image-pro`、`qwen-image-max`），与 bl 的 id 串不同，不可混用。
 
