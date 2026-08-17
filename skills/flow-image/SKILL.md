@@ -40,6 +40,7 @@ metadata:
 - extract_images.py — 技能脚本：从 grsapi 响应提取图片，自动识别 Gemini inlineData 与 GPT url/b64_json 格式;bailian 不需要
 - wait_for_file.sh — 技能脚本：文件写入同步检测(存在 → 大小稳定 → sync)
 - remove_chroma_key.py — 技能脚本：色键移除为 Alpha，需 pillow(仅 transparent 模式)
+- compress_jpeg.py — 技能脚本：JPEG 按体积上限递减压缩(默认 ≤500KB)，需 pillow;项目消费图片落工作区时用
 - 路由 / 模型清单 — `references/providers.md`、`references/2026-06-11-grsapi-image-models.md`：provider×model 路由规则、合法集、参数差异;grsapi 46 模型端点速查
 
 ## Workflow
@@ -112,7 +113,7 @@ metadata:
 7. **打开与汇报**
    - [ ] 单张生成且未传 `--no-open` 且 `--mode` 非 batch:优先 `code <图片路径>`，否则 `open <图片所在目录>`
    - [ ] `--mode batch` / `--no-open`:不自动打开
-   - [ ] 项目消费的图片复制进工作区(可按需压缩裁剪)，并更新消费代码的引用
+   - [ ] 项目消费的图片复制进工作区并按需压缩（JPEG 用 `python3 ~/.claude/skills/flow-image/scripts/compress_jpeg.py --input <src> --out <dst.jpg> --max-kb 500`），更新消费代码的引用
    - [ ] 汇报:图片 Markdown 链接、**provider**、model、最终提示词、文件大小;batch 模式列出全部产物路径
 
 ## 错误处理
