@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node skills/flow-skill/scripts/lint.mjs skills",
+    "test:pre-push": "node --test scripts/pre-push/*.test.mjs",
+    "setup:hooks": "git config core.hooksPath .githooks",
     "bump": "node skills/flow-skill/scripts/bump.mjs"
   }
 }

@@ -70,7 +70,7 @@ npx skills ls
 
 **生成与教学**
 
-- `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图；双 provider 自动路由
+- `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图；双 provider 自动路由；基于百炼
 - `/flow-tour {要求}`（稳定） — 构建交互式分步教学（网站或 CodeTour）
 
 **知识与检索**
@@ -116,6 +116,25 @@ IDE 不支持 SlashCommand 怎么办？
 ## 维护
 
 每个技能有独立版本号（frontmatter `metadata.version` + CHANGELOG.md + `<skill>@<version>` tag 三处落点）。改版统一走 `pnpm bump <skill> [patch|minor|major|x.y.z] "<CHANGELOG 条目>"`，禁止手工分头改。规范详见 `skills/flow-skill/references/create-skill.md` 的「版本化约定」。
+
+## 参与开发
+
+本仓有开源防泄漏闸：pre-push hook 扫描推送内容中的秘钥、真实本机路径、手机号、本机敏感词与禁止入库路径，命中即阻断。
+
+一次性设置（本机）：
+
+```bash
+brew install gitleaks   # 扫描引擎,机器级依赖
+pnpm setup:hooks        # git config core.hooksPath .githooks
+```
+
+机制与维护：
+
+- 形态规则（gitleaks 默认集 + 仓级定制）在 `.githooks/gitleaks.toml`；误报改其中 allowlist，单行豁免用 `gitleaks:allow` 行内注释
+- 本机敏感词黑名单：`cp configs/secret-scan.example.txt configs/secret-scan.local.txt` 后逐行填写；该文件被 .gitignore 排除，运行时合并进扫描配置，永不入库
+- 禁止路径策略（`.env`、密钥文件、各技能 `configs/` 本机配置区等）在 `scripts/pre-push/forbidden-paths.mjs`
+- 测试：`pnpm test:pre-push`；紧急绕过：`git push --no-verify`
+- worktree 注意：`configs/secret-scan.local.txt` 属本机文件，新建 worktree 后需复制过去才参与扫描
 
 ## 反馈与许可
 

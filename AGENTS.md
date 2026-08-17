@@ -24,3 +24,10 @@
 ## 校验
 
 - lint:`node skills/flow-skill/scripts/lint.mjs skills/<name>`，提交前 0 error / 0 warning
+
+## 开源防泄漏
+
+- pre-push hook(`.githooks/pre-push`)扫描推送内容:秘钥形态、真实 home 路径、手机号、本机黑名单字面量、禁止路径,命中阻断;激活:`pnpm setup:hooks`(需 `brew install gitleaks`)
+- 敏感词分层:通用形态规则在 `.githooks/gitleaks.toml`(入库);本机敏感词(手机号/内部域名/口令)只进 `configs/secret-scan.local.txt`(gitignored,永不入库——入库即公开)
+- 禁止路径策略(防 `git add -f` 强塞本机配置):`scripts/pre-push/forbidden-paths.mjs`
+- 测试:`pnpm test:pre-push`

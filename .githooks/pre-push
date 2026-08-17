@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+// git pre-push hook:经 core.hooksPath 挂载(一次性设置见 README「参与开发」:pnpm setup)
+// 扫描逻辑在 scripts/pre-push/,本文件只做入口转发;git 保证 hook 运行时 cwd 为工作区根
+import { main } from "../scripts/pre-push/scan.mjs";
+
+main(process.cwd());

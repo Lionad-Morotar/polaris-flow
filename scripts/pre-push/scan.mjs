@@ -129,8 +129,11 @@ function printReport(result) {
   }
 }
 
-function main() {
-  const repoDir = path.resolve(process.argv[2] ?? process.cwd());
+/**
+ * hook 入口:repoDir 由调用方显式给出——git 钩子 argv 携带远端名/URL,
+ * 本函数不读 process.argv,避免把远端名误当路径
+ */
+export function main(repoDir) {
   let stdinText = "";
   try {
     stdinText = readFileSync(0, "utf8");
@@ -152,7 +155,7 @@ function main() {
   process.exit(0);
 }
 
-// 被 import 时不执行 main(测试直调 runPrePush)
+// 直接以 CLI 运行时(.githooks/pre-push 之外的入口):参数为 repoDir,默认 cwd
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+  main(path.resolve(process.argv[2] ?? process.cwd()));
 }
