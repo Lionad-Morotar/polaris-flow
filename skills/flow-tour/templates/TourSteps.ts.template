@@ -1,0 +1,126 @@
+/**
+ * <TourName> Tour 步骤定义。
+ *
+ * 每一步描述相对于前一步的 patch，最终合并成完整的特性配置。
+ * 本模板使用泛型 `TourConfig`，请在实际项目中替换为具体特性配置类型。
+ */
+
+/**
+ * 本 Tour 的配置类型占位符。
+ *
+ * 推荐做法：
+ * 1. 若项目已有类型定义，改为 `import type { YourFeatureConfig } from "~/types";`
+ * 2. 若 tour 仅需展示代码位置而无参数面板，可保持 `Record<string, unknown>`。
+ */
+export type TourConfig = Record<string, unknown>;
+
+export interface TourStep {
+  id: string;
+  /**
+   * 篇章归属（如「幕一 · 舞台基础」）。同名 act 的步骤必须连续，UI 据此插篇章标题行。
+   * 从叙事逻辑推导（"这步教什么概念属于哪个主题"），不能按步数脑补；
+   * 步骤 ≥ 12 时必须分篇章。连续性由 TourProgression.spec 守护。
+   */
+  act: string;
+  title: string;
+  description: string;
+  /**
+   * 基础名词扫盲（中文词条，对应 <tourName>TermGlossary 的键）。
+   * 解释"这个概念是什么"，与 techniques 的"怎么做"互补。
+   * 守护测试要求 glossary + techniques 标签总数 ≥ 8。
+   */
+  glossary: string[];
+  techniques: string[];
+  /**
+   * 必须恰好包含一个 marker id。
+   * 如果一个 step 需要多个锚点才能讲清楚，请拆成多个 step。
+   */
+  codeLocations: string[];
+  /**
+   * 相对于前一步的配置增量。
+   * 若某步骤无参数（如 base 步骤展示最简形态），可传入空对象 `{}`。
+   * CodeTour-only 模式下可忽略此字段。
+   */
+  patch: Partial<TourConfig>;
+}
+
+/**
+ * 基础配置，展示 <TourName> 的最简可用形态。
+ * 请根据实际特性替换字段；保持字段级可 patch 即可。
+ */
+const baseConfig: TourConfig = {
+  // TODO: 替换为项目实际默认字段
+};
+
+/**
+ * 字面量联合阶段字段的有序取值表（初值 → 完整态）。双重身份：
+ * 1. 渲染层据此派生 uniform / 状态机，把每个特性展开成可独立观察的中间态；
+ * 2. TourProgression.spec 据此把每阶段展开成"已达 rank k"的布尔序列，
+ *    使特征向量不必手工枚举新字段（扩容时自动捕获）。
+ * 无中间态维度的 tour 留空对象 {}，progression 的 stage 段即不贡献，模板对两种 tour 通用。
+ */
+export const STAGE_ORDERS = {
+  // TODO: 有中间态的维度在此登记，如 steamStage: ['plane', 'noise', 'flow', 'sway', 'shaped']
+} as const satisfies Partial<Record<keyof TourConfig, readonly string[]>>;
+
+export type StageField = keyof typeof STAGE_ORDERS;
+
+export const <TourName>TourSteps: TourStep[] = [
+  {
+    id: "base",
+    act: "TODO 篇章名",
+    title: "基础形态",
+    // Step 0 只放原子最小画面(单个原语级);壳与无开关的固定体由后续步骤立起,
+    // 固定体用纯函数 computeBodyVisible 随首个交互项派生显隐,不要塞进首屏。
+    description: "展示 <TourName> 的最简可用形态，只保留核心默认配置，帮助学习者建立 baseline。",
+    glossary: ["TODO 基础名词", "TODO 基础名词"],
+    techniques: ["基础配置", "默认样式"],
+    codeLocations: ["<tour-name>-base-marker"],
+    patch: baseConfig
+  },
+  {
+    id: "param-a",
+    title: "调整参数 A",
+    description: "通过改变参数 A，观察对特性行为或视觉效果的影响。",
+    glossary: ["TODO 基础名词"],
+    techniques: ["参数映射", "实时更新"],
+    codeLocations: ["<tour-name>-param-a-marker"],
+    patch: {
+      // 仅描述相对于前一步的增量
+    }
+  }
+];
+
+/**
+ * 合并前 N 步 patch，得到当前步骤的完整配置。
+ */
+export function buildTourConfig(stepIndex: number): TourConfig {
+  const config: TourConfig = { ...baseConfig };
+  for (let i = 0; i <= stepIndex; i++) {
+    // noUncheckedIndexedAccess 下直接索引会得到 T | undefined，需空值保护
+    const step = <TourName>TourSteps[i];
+    if (!step) continue;
+    deepMerge(config, step.patch);
+  }
+  return config;
+}
+
+/**
+ * 浅层合并对象。若需处理嵌套对象（如 effect.*），请替换为项目已有的 deepMerge。
+ */
+function deepMerge(target: TourConfig, source: Partial<TourConfig>): void {
+  for (const [key, value] of Object.entries(source)) {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      target[key] &&
+      typeof target[key] === "object" &&
+      !Array.isArray(target[key])
+    ) {
+      deepMerge(target[key] as TourConfig, value as Partial<TourConfig>);
+    } else {
+      target[key] = value;
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Glossary Schema",
+  "description": "术语表结构定义，支持 CSV 和 TOML 两种格式",
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "术语原文（必填）"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["keep", "translate"],
+          "description": "规则类型（必填）：keep 保留原文，translate 强制翻译"
+        },
+        "translation": {
+          "type": "string",
+          "description": "翻译结果（action=translate 时必填，action=keep 时可选）"
+        },
+        "reason": {
+          "type": "string",
+          "description": "翻译说明（选填）"
+        }
+      },
+      "required": ["term", "action"],
+      "if": {
+        "properties": {
+          "action": {
+            "const": "translate"
+          }
+        },
+        "required": ["action"]
+      },
+      "then": {
+        "required": ["translation"]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "csv",
+              "description": "CSV 格式术语表"
+            },
+            "columns": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["term", "action", "translation", "reason"]
+              },
+              "description": "CSV 列顺序：term, action, translation, reason"
+            },
+            "requiredColumns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "必填列",
+              "default": ["term", "action", "translation"]
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/rule"
+              },
+              "minItems": 1,
+              "description": "术语规则列表"
+            }
+          },
+          "required": ["format", "columns", "rules"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "const": "toml",
+              "description": "TOML 格式术语表"
+            },
+            "domain": {
+              "type": "string",
+              "description": "术语表所属领域"
+            },
+            "description": {
+              "type": "string",
+              "description": "术语表描述"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/rule"
+              },
+              "minItems": 1,
+              "description": "术语规则列表"
+            }
+          },
+          "required": ["format", "domain", "rules"]
+        }
+      ]
+    }
+  ]
+}

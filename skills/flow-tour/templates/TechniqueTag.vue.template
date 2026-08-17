@@ -1,0 +1,202 @@
+<script lang="ts">
+import { ref } from "vue";
+
+// 模块级单例：同一时刻只允许一个标签详解展开，
+// 新开一个会自动关掉上一个（hover 掠过一串标签时不会叠出多个气泡）
+const openName = ref<string | null>(null);
+const openPinned = ref(false);
+</script>
+
+<script setup lang="ts">
+// ref 复用上方 plain script 的导入（两个 script 块共享作用域，重复导入会冲突）
+import { computed, onBeforeUnmount, watch } from "vue";
+import { useTourSound } from "~/composables/tour/useTourSound";
+
+const props = defineProps<{
+  /** 技术标签名（与 glossary 词条 key 一致） */
+  name: string;
+  /** 详解正文 */
+  detail: string;
+}>();
+
+const sound = useTourSound();
+const btnRef = ref<HTMLElement | null>(null);
+const popoverRef = ref<HTMLElement | null>(null);
+const popoverStyle = ref<Record<string, string>>({});
+
+const isOpen = computed(() => openName.value === props.name);
+
+/** 依标签当前位置计算气泡方位：上方空间够就放上面，否则翻到下面 */
+function measure() {
+  const btn = btnRef.value;
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const width = Math.min(320, window.innerWidth - 16);
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+  popoverStyle.value = rect.top > 260
+    ? { left: `${left}px`, bottom: `${window.innerHeight - rect.top + 10}px`, width: `${width}px` }
+    : { left: `${left}px`, top: `${rect.bottom + 10}px`, width: `${width}px` };
+}
+
+function open(pinned: boolean) {
+  openName.value = props.name;
+  openPinned.value = pinned;
+  measure();
+  sound.play("toggle");
+}
+
+function close() {
+  if (openName.value === props.name) {
+    openName.value = null;
+    openPinned.value = false;
+  }
+}
+
+function onEnter() {
+  cancelClose();
+  open(false);
+}
+
+// hover 关闭加 200ms 宽限，允许指针从标签滑入气泡而不闪关
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleClose() {
+  if (openPinned.value) return;
+  cancelClose();
+  closeTimer = setTimeout(close, 200);
+}
+
+function cancelClose() {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
+}
+
+function onLeave() {
+  scheduleClose();
+}
+
+function onClick() {
+  if (isOpen.value && openPinned.value) {
+    close();
+  } else {
+    open(true);
+  }
+}
+
+// 钉住状态下，点击气泡外部或按 Escape 关闭
+function onDocPointerDown(e: PointerEvent) {
+  const target = e.target as Node;
+  if (btnRef.value?.contains(target) || popoverRef.value?.contains(target)) return;
+  close();
+}
+
+function onDocKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape") close();
+}
+
+function bindDoc() {
+  document.addEventListener("pointerdown", onDocPointerDown);
+  document.addEventListener("keydown", onDocKeydown);
+}
+
+function unbindDoc() {
+  document.removeEventListener("pointerdown", onDocPointerDown);
+  document.removeEventListener("keydown", onDocKeydown);
+}
+
+watch(isOpen, (open) => {
+  if (open && openPinned.value) bindDoc();
+  else unbindDoc();
+});
+
+onBeforeUnmount(() => {
+  cancelClose();
+  unbindDoc();
+  close();
+});
+</script>
+
+<template>
+  <button
+    ref="btnRef"
+    type="button"
+    class="tour-tag"
+    :class="{ open: isOpen }"
+    :aria-expanded="isOpen"
+    @mouseenter="onEnter"
+    @mouseleave="onLeave"
+    @click.stop="onClick"
+  >
+    {{ name }}
+    <!-- 气泡 teleport 到 tour 根节点下：继承页面设计令牌，fixed 定位不受父级 overflow 裁剪 -->
+    <Teleport to=".<tour-name>-tour">
+      <div
+        v-if="isOpen"
+        ref="popoverRef"
+        class="tech-popover"
+        :style="popoverStyle"
+        role="tooltip"
+        @mouseenter="cancelClose"
+        @mouseleave="onLeave"
+      >
+        <p class="tech-popover-title mono">{{ name }}</p>
+        <p class="tech-popover-detail">{{ detail }}</p>
+      </div>
+    </Teleport>
+  </button>
+</template>
+
+<style scoped>
+.tour-tag {
+  padding: 5px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--cream);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.tour-tag:hover,
+.tour-tag.open {
+  border-color: oklch(0.93 0.1 155 / 0.45);
+  background: oklch(0.93 0.1 155 / 0.08);
+}
+
+.tech-popover {
+  position: fixed;
+  z-index: 70;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: oklch(0.22 0.01 100 / 0.96);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px oklch(0.1 0.006 100 / 0.6);
+  animation: pop-in 0.22s var(--ease-out-quart) both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.tech-popover-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--mint);
+}
+
+.tech-popover-detail {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-60);
+}
+</style>

@@ -1,0 +1,1718 @@
+<template>
+  <!-- <TourName> Tour 教学页：全屏标本画布 + 半透明 blur 浮动面板（报头 / 目录 / 文章区），适配 PC 录屏与移动端截图 -->
+  <main
+    class="<tour-name>-tour"
+    :class="{
+      'params-open': paramsOpen,
+      booted,
+      'dragging-v': articleDragging,
+      'dragging-h': tocDragging,
+      panning: canvasPanning,
+      'pan-ready': metaDown
+    }"
+    :style="{
+      '--article-h': `${articleHeight}px`,
+      '--toc-w': `${tocWidth}px`,
+      '--pan-x': `${panX}px`,
+      '--pan-y': `${panY}px`
+    }"
+  >
+    <!-- 全屏标本画布：展品即当前特性，Fig. 图注标注当前步骤；
+        画布内嵌到「报头/目录/文章区」之外的可见区，展品默认不被面板遮挡；
+        桌面 ⌘+鼠标拖拽平移（普通拖拽放行给预览内容自身交互，如 3D 场景的轨道控制器），
+        移动双指拖拽平移（切步骤保留取景），双击复位居中，移动三指点按开关参数面板 -->
+    <section class="stage" data-testid="tour-preview">
+      <div
+        class="stage-canvas"
+        data-testid="preview-main"
+        @pointerdown.capture="onCanvasPointerCapture"
+        @pointerdown="onCanvasPointerDown"
+        @pointermove="onCanvasPointerMove"
+        @pointerup="onCanvasPointerUp"
+        @pointercancel="onCanvasPointerUp"
+        @dblclick="resetPan(true)"
+      >
+        <!-- TODO: 在此渲染特性预览，读取 tour.tourConfig 驱动。
+             本节点已内嵌到面板之外的可见区矩形，预览按容器填满即可自动适配；
+             WebGL 类预览需用 ResizeObserver 观测本节点同步视口。
+             注意画布整体会按 --pan-x/--pan-y 平移，预览内容须位于本节点内部 -->
+      </div>
+
+      <p :key="tour.currentStep.value.id" class="fig-caption mono">{{ figCaption }}</p>
+    </section>
+
+    <!-- 报头：刊名 + 期号进度 + 音效/参数开关。
+         chrome 文字须适配画布暗态:画布上抛 stage-dark 边沿信号,根容器加 is-night 翻令牌;
+         迁移来的气泡/popover 若 var() 取未定义属性会继承到暗字而消失,悬浮层用固定浅色或双态令牌 -->
+    <header class="masthead">
+      <div class="masthead-brand">
+        <span class="wordmark"><TourName></span>
+        <span class="masthead-sub mono">分步教学 · Field Notes</span>
+      </div>
+      <div class="masthead-meta">
+        <span class="mono meta-step">{{ stepFolio }}</span>
+        <span class="meta-progress" aria-hidden="true">
+          <i :style="{ width: `${progressPct}%` }" />
+        </span>
+        <button
+          type="button"
+          class="icon-btn"
+          :class="{ off: !sound.enabled.value }"
+          :aria-pressed="sound.enabled.value"
+          aria-label="切换音效"
+          @click="sound.toggle()"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M11 5 6.5 9H3v6h3.5L11 19V5z" fill="currentColor" stroke="none" />
+            <path class="wave" d="M15 9.5a4 4 0 0 1 0 5" />
+            <path class="wave" d="M17.5 7a8 8 0 0 1 0 10" />
+            <line class="slash" x1="4.5" y1="4.5" x2="19.5" y2="19.5" />
+          </svg>
+        </button>
+        <button ref="paramsBtnRef" type="button" class="params-btn mono" @click="toggleParams">
+          参数
+        </button>
+      </div>
+    </header>
+
+    <!-- 目录：PC 竖排 TOC，移动端横滑 chips -->
+    <aside class="toc" data-testid="tour-sidebar">
+      <p class="toc-label mono">目录 · Contents</p>
+      <nav ref="tocListRef" class="toc-list">
+        <!-- 按 act 篇章分组：标题行非 button（pointer-events:none 兜底，移动端隐藏），
+             items 用全局 idx 判 active / 跳步；入场 reveal 延迟经 --reveal-delay 内联注入，
+             取代 nth-child 硬编码（标题行会顶乱 nth-child 计数），适应任意步数且与 hover 解耦 -->
+        <template v-for="group in groupedSteps" :key="group.act">
+          <p class="toc-act-title mono" aria-hidden="true">{{ group.act }}</p>
+          <button
+            v-for="entry in group.items"
+            :key="entry.step.id"
+            type="button"
+            class="toc-item"
+            :class="{ active: entry.idx === tour.currentStepIndex.value }"
+            :data-testid="`tour-step-${entry.step.id}`"
+            :style="{ '--reveal-delay': `${revealDelay(entry.idx)}s` }"
+            @click="tour.goToStep(entry.idx)"
+          >
+            <span class="toc-num">{{ pad(entry.idx + 1) }}</span>
+            <span class="toc-title">{{ entry.step.title }}</span>
+          </button>
+        </template>
+      </nav>
+      <!-- 翻页与重置：录屏路径上的显式控件（键盘 ← → 等价） -->
+      <div class="toc-actions">
+        <button
+          type="button"
+          class="toc-nav"
+          :disabled="tour.isFirst.value"
+          aria-label="上一步"
+          @click="tour.prev()"
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          class="toc-nav"
+          :disabled="tour.isLast.value"
+          aria-label="下一步"
+          @click="tour.next()"
+        >
+          →
+        </button>
+        <button type="button" class="toc-reset" @click="onReset">
+          重置
+        </button>
+      </div>
+      <p class="toc-foot mono">← → 切换 · ⌘+拖移动画布 · 双击复位</p>
+      <!-- 右缘拖拽把手：调整目录栏宽（桌面端），宽度按模式存 localStorage -->
+      <div
+        class="toc-grip"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="拖拽调节目录宽度"
+        @pointerdown="onTocGripPointerDown"
+      />
+    </aside>
+
+    <!-- 参数面板：PC 浮于右上，移动端为底部抽屉（直接挂 main 下，避免被 stage 层叠上下文限制） -->
+    <div ref="paramsSheetRef" class="params-sheet">
+      <div class="sheet-head">
+        <span class="mono">参数 · Params</span>
+        <button type="button" class="sheet-close" @click="paramsOpen = false">
+          收起
+        </button>
+      </div>
+      <div ref="guiContainerRef" class="tour-gui" data-testid="tour-gui" />
+    </div>
+
+    <!-- 文章区：步骤叙事 + 技术标签 + 代码位置；上边缘可拖拽调节高度；
+        slot 承载入场 reveal，article 承载步骤过渡，两者分离避免 transition 互相覆盖 -->
+    <div class="article-slot">
+      <div
+        class="article-grip"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="拖拽调节介绍区高度"
+        @pointerdown="onGripPointerDown"
+      />
+      <Transition name="stepfade" mode="out-in">
+        <section :key="tour.currentStep.value.id" class="article" data-testid="tour-detail">
+        <div class="article-lede">
+          <p class="folio mono">Step {{ stepFolio }}</p>
+          <h2 class="article-title">{{ tour.currentStep.value.title }}</h2>
+          <p class="article-desc">{{ tour.currentStep.value.description }}</p>
+        </div>
+        <div class="article-side">
+          <div class="meta-row">
+            <strong>名词释义</strong>
+            <TechniqueTag
+              v-for="term in tour.currentStep.value.glossary"
+              :key="term"
+              :name="term"
+              :detail="<tourName>TermGlossary[term] ?? ''"
+            />
+          </div>
+          <div class="meta-row">
+            <strong>关键技术</strong>
+            <TechniqueTag
+              v-for="tech in tour.currentStep.value.techniques"
+              :key="tech"
+              :name="tech"
+              :detail="<tourName>TechniqueGlossary[tech] ?? ''"
+            />
+          </div>
+          <div class="meta-row">
+            <strong>代码位置</strong>
+            <template v-for="location in tour.currentStep.value.codeLocations" :key="location">
+              <button
+                v-if="markers[location]"
+                type="button"
+                class="code-link"
+                :title="`在编辑器中打开 ${markers[location].file}:${markers[location].line}`"
+                @click="openMarker(markers[location])"
+              >
+                <code>{{ locationLabel(location) }}</code>
+              </button>
+              <code v-else class="code-missing">{{ location }}（缺失）</code>
+            </template>
+          </div>
+          <p class="tour-hint">你改过的参数会跨步骤保留，点「重置」回到教学默认值。</p>
+        </div>
+        </section>
+      </Transition>
+    </div>
+  </main>
+</template>
+
+<script setup lang="ts">
+import GUI from "lil-gui";
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import rawMarkers from "~/assets/tour/<tour-name>-tour-markers.json";
+import TechniqueTag from "~/components/tour/TechniqueTag.vue";
+import {
+  getGuiFieldsForStep,
+  type GuiFieldDefinition
+} from "~/config/tour/<tour-name>TourGuiFolders";
+import { <tourName>TechniqueGlossary } from "~/config/tour/<tour-name>TechniqueGlossary";
+import { <tourName>TermGlossary } from "~/config/tour/<tour-name>TermGlossary";
+import type { TourConfig } from "~/config/tour/<tour-name>TourSteps";
+import { use<TourName>Tour } from "~/composables/tour/use<TourName>Tour";
+import { useTourSound } from "~/composables/tour/useTourSound";
+import { openInEditor } from "~/utils/editor";
+import { shortestUniquePathLabels } from "~/utils/pathLabel";
+
+interface MarkerLocation {
+  file: string;
+  line: number;
+}
+
+const markers = rawMarkers as Record<string, MarkerLocation>;
+
+// tour 页跳转编辑器需要项目绝对路径前缀与本机编辑器协议（nuxt.config 注入，
+// 注入方式见 references/website.md「代码位置跳转」）；localStorage 可手动覆盖
+const runtimeConfig = useRuntimeConfig().public;
+const projectRoot = runtimeConfig.projectRoot as string;
+const detectedEditor = runtimeConfig.tourEditor as string;
+
+function openMarker(marker: MarkerLocation) {
+  sound.play("tick");
+  const editor = window.localStorage.getItem("<tour-name>-tour-editor") || detectedEditor;
+  openInEditor(marker.file, marker.line, projectRoot, editor);
+}
+
+// 代码位置芯片只显示最短不冲突标签（文件名优先，冲突向上补目录），完整路径留在 title
+const locationLabels = computed(() => {
+  const files: string[] = [];
+  for (const loc of tour.currentStep.value.codeLocations) {
+    const marker = markers[loc];
+    if (marker) files.push(marker.file);
+  }
+  return shortestUniquePathLabels(files);
+});
+
+function locationLabel(location: string): string {
+  const marker = markers[location];
+  if (!marker) return location;
+  const short = locationLabels.value.get(marker.file) ?? marker.file;
+  return `${short}:${marker.line}`;
+}
+
+const guiContainerRef = ref<HTMLElement | null>(null);
+const tocListRef = ref<HTMLElement | null>(null);
+const paramsSheetRef = ref<HTMLElement | null>(null);
+const paramsBtnRef = ref<HTMLElement | null>(null);
+const tour = use<TourName>Tour();
+const sound = useTourSound();
+const paramsOpen = ref(false);
+const booted = ref(false);
+
+let gui: GUI | null = null;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const stepFolio = computed(() => `${pad(tour.currentStepIndex.value + 1)} / ${pad(tour.steps.length)}`);
+const progressPct = computed(() => ((tour.currentStepIndex.value + 1) / tour.steps.length) * 100);
+// 图注：杂志 Fig. 体例；有代表性的实时参数可追加在标题后
+const figCaption = computed(
+  () => `Fig. ${pad(tour.currentStepIndex.value + 1)} · ${tour.currentStep.value.title}`
+);
+
+// 目录按 act 篇章分组：同名 act 的步骤归入一组，标题行据此插入。保留全局 idx 供
+// active 判定与跳步——分组只改呈现顺序，不改步骤语义。相邻合并（last.act === step.act）
+// 比 groupBy 更安全：只合并连续同名 act，即使数据层将来出现非连续同名也不会跨组误并。
+const groupedSteps = computed(() => {
+  const groups: { act: string; items: { step: (typeof tour.steps)[number]; idx: number }[] }[] = [];
+  tour.steps.forEach((step, idx) => {
+    const last = groups[groups.length - 1];
+    if (last && last.act === step.act) last.items.push({ step, idx });
+    else groups.push({ act: step.act, items: [{ step, idx }] });
+  });
+  return groups;
+});
+
+// 入场 reveal 错峰：前几项线性错开，封顶 0.6s——任意步数下后段不再像 nth-child 硬编码那样
+// 无延迟突变。仅驱动 opacity/transform 的 reveal 过渡；hover 的 background/color delay 为 0。
+const revealDelay = (idx: number): number =>
+  Math.round(Math.min(0.16 + idx * 0.05, 0.6) * 100) / 100;
+
+// ===== 布局偏好：面板尺寸按模式（desktop/mobile 分开）持久化到 localStorage =====
+// 文章区高度上边缘拖拽可调；目录宽度右缘拖拽可调（仅桌面）。
+// 二者挂 CSS 变量，toc 底边、图注、移动端抽屉、面板宽度全部声明式联动
+const articleHeight = ref(320);
+const articleDragging = ref(false);
+const tocWidth = ref(264);
+const tocDragging = ref(false);
+
+// 画布平移：桌面 ⌘+鼠标拖拽（普通拖拽放行给预览内容自身交互）/ 移动双指拖拽，双击复位；
+// 切步骤刻意保留平移量——录屏取景的构图需要跨步骤一致
+const panX = ref(0);
+const panY = ref(0);
+const canvasPanning = ref(false);
+
+let mql: MediaQueryList | null = null;
+const mode = ref<"desktop" | "mobile">("desktop");
+const layoutKey = (name: string) => `<tour-name>-tour:${mode.value}:${name}`;
+
+function loadLayout() {
+  const h = Number(window.localStorage.getItem(layoutKey("article-h")));
+  if (h >= 140) {
+    articleHeight.value = h;
+  } else {
+    articleHeight.value = Math.min(Math.max(Math.round(window.innerHeight * 0.34), 160), 620);
+  }
+  const w = Number(window.localStorage.getItem(layoutKey("toc-w")));
+  if (w >= 200) tocWidth.value = w;
+}
+
+function saveLayout() {
+  window.localStorage.setItem(layoutKey("article-h"), String(Math.round(articleHeight.value)));
+  if (mode.value === "desktop") {
+    window.localStorage.setItem(layoutKey("toc-w"), String(Math.round(tocWidth.value)));
+  }
+}
+
+function onModeChange(e: MediaQueryListEvent) {
+  mode.value = e.matches ? "mobile" : "desktop";
+  loadLayout();
+  measureTocBottom();
+}
+
+/** 量测目录面板底边写入 --toc-bottom：移动端 chips 横滑条高度自适应内容，
+   stage-canvas 的可见区上沿需要这个值。用 offsetTop/offsetHeight 而非
+   getBoundingClientRect——后者含 transform，入场 reveal 的 translateY
+   会把量测结果抬高 10px */
+function measureTocBottom() {
+  const root = document.querySelector<HTMLElement>(".<tour-name>-tour");
+  const toc = root?.querySelector<HTMLElement>(".toc");
+  if (!root || !toc) return;
+  root.style.setProperty("--toc-bottom", `${Math.round(toc.offsetTop + toc.offsetHeight)}px`);
+}
+
+onMounted(() => {
+  mql = window.matchMedia("(max-width: 767px)");
+  mode.value = mql.matches ? "mobile" : "desktop";
+  loadLayout();
+  measureTocBottom();
+  // Web 字体就绪后 chips 高度可能变化，补一次量测
+  document.fonts?.ready.then(measureTocBottom).catch(() => {});
+  mql.addEventListener("change", onModeChange);
+  rebuildGui();
+  window.addEventListener("keydown", onKeydown);
+  window.addEventListener("keydown", onMetaKeyChange);
+  window.addEventListener("keyup", onMetaKeyChange);
+  window.addEventListener("blur", onWindowBlur);
+  // 入场编排：首帧后加 booted，触发各区 staggered reveal
+  requestAnimationFrame(() => {
+    booted.value = true;
+  });
+});
+
+onBeforeUnmount(() => {
+  mql?.removeEventListener("change", onModeChange);
+  window.removeEventListener("keydown", onKeydown);
+  window.removeEventListener("keydown", onMetaKeyChange);
+  window.removeEventListener("keyup", onMetaKeyChange);
+  window.removeEventListener("blur", onWindowBlur);
+  document.removeEventListener("pointerdown", onSheetOutsidePointerDown);
+  gui?.destroy();
+  gui = null;
+});
+
+/** 文章区上边缘拖拽：指针捕获保证拖出把手也不断线；touch-action:none 防触屏滚动劫持 */
+function onGripPointerDown(e: PointerEvent) {
+  const grip = e.currentTarget as HTMLElement;
+  const startY = e.clientY;
+  const startH = articleHeight.value;
+  articleDragging.value = true;
+  try {
+    grip.setPointerCapture(e.pointerId);
+  } catch {
+    // 合成指针事件（自动化验证）没有活动 pointerId，捕获失败不影响拖动逻辑
+  }
+  const onMove = (ev: PointerEvent) => {
+    const max = Math.round(window.innerHeight * 0.72);
+    articleHeight.value = Math.min(max, Math.max(140, startH + (startY - ev.clientY)));
+  };
+  const onEnd = () => {
+    articleDragging.value = false;
+    saveLayout();
+    grip.removeEventListener("pointermove", onMove);
+    grip.removeEventListener("pointerup", onEnd);
+    grip.removeEventListener("pointercancel", onEnd);
+  };
+  grip.addEventListener("pointermove", onMove);
+  grip.addEventListener("pointerup", onEnd);
+  grip.addEventListener("pointercancel", onEnd);
+}
+
+/** 目录右缘拖拽调宽（桌面）：clamped 200-420px，松手后按模式持久化 */
+function onTocGripPointerDown(e: PointerEvent) {
+  const grip = e.currentTarget as HTMLElement;
+  const startX = e.clientX;
+  const startW = tocWidth.value;
+  tocDragging.value = true;
+  try {
+    grip.setPointerCapture(e.pointerId);
+  } catch {
+    // 同上：合成事件无活动 pointerId
+  }
+  const onMove = (ev: PointerEvent) => {
+    tocWidth.value = Math.min(420, Math.max(200, startW + (ev.clientX - startX)));
+  };
+  const onEnd = () => {
+    tocDragging.value = false;
+    saveLayout();
+    grip.removeEventListener("pointermove", onMove);
+    grip.removeEventListener("pointerup", onEnd);
+    grip.removeEventListener("pointercancel", onEnd);
+  };
+  grip.addEventListener("pointermove", onMove);
+  grip.addEventListener("pointerup", onEnd);
+  grip.addEventListener("pointercancel", onEnd);
+}
+
+// ===== 画布平移手势 =====
+// 桌面：⌘+鼠标拖拽平移；普通单击拖拽不截获，留给预览内容自身交互
+// （如 3D 预览的 OrbitControls 旋转摄像头）——两者同键位会互相打架。
+// 捕获阶段对 ⌘+拖拽 stopPropagation，事件到不了预览画布，预览自身交互不触发。
+// 触屏：双指拖拽平移（质心位移）防误触；三指同时按下且短时小位移视为点按，开关参数面板
+const pointers = new Map<number, { x: number; y: number }>();
+let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
+let threeFingerTap: { t: number; cx: number; cy: number } | null = null;
+
+// ⌘ 按下态：驱动 pan-ready 光标反馈（grab）；window blur 时复位防卡键
+const metaDown = ref(false);
+
+function onMetaKeyChange(e: KeyboardEvent) {
+  if (e.key === "Meta") metaDown.value = e.type === "keydown";
+}
+
+function onWindowBlur() {
+  metaDown.value = false;
+}
+
+/** ⌘+鼠标拖拽：捕获阶段截停并直接启动平移（冒泡监听收不到被截停的事件） */
+function onCanvasPointerCapture(e: PointerEvent) {
+  if (e.pointerType !== "mouse" || !e.metaKey) return;
+  e.stopPropagation();
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  canvasPanning.value = true;
+  panStart = { x: e.clientX, y: e.clientY, panX: panX.value, panY: panY.value };
+}
+
+function centroid(): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  for (const p of pointers.values()) {
+    x += p.x;
+    y += p.y;
+  }
+  const n = Math.max(pointers.size, 1);
+  return { x: x / n, y: y / n };
+}
+
+function clampPan(x: number, y: number): [number, number] {
+  const mx = window.innerWidth * 0.4;
+  const my = window.innerHeight * 0.4;
+  return [Math.min(mx, Math.max(-mx, x)), Math.min(my, Math.max(-my, y))];
+}
+
+function onCanvasPointerDown(e: PointerEvent) {
+  // 鼠标平移已由捕获阶段的 ⌘+拖拽启动；普通鼠标拖拽放行给预览内容自身交互
+  if (e.pointerType === "mouse") return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (e.pointerType !== "mouse" && pointers.size === 2) {
+    const c = centroid();
+    canvasPanning.value = true;
+    panStart = { x: c.x, y: c.y, panX: panX.value, panY: panY.value };
+  } else if (e.pointerType !== "mouse" && pointers.size === 3) {
+    // 第三指按下：进入点按判定，取消平移
+    const c = centroid();
+    threeFingerTap = { t: e.timeStamp, cx: c.x, cy: c.y };
+    canvasPanning.value = false;
+  }
+}
+
+function onCanvasPointerMove(e: PointerEvent) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (threeFingerTap) return;
+  if (!canvasPanning.value) return;
+  const isMouse = e.pointerType === "mouse";
+  const c = isMouse ? { x: e.clientX, y: e.clientY } : centroid();
+  const [nx, ny] = clampPan(
+    panStart.panX + (c.x - panStart.x),
+    panStart.panY + (c.y - panStart.y)
+  );
+  panX.value = nx;
+  panY.value = ny;
+}
+
+function onCanvasPointerUp(e: PointerEvent) {
+  // 三指点按判定：短时长 + 质心小位移
+  if (threeFingerTap && e.pointerType !== "mouse") {
+    const c = centroid();
+    const dt = e.timeStamp - threeFingerTap.t;
+    const dist = Math.hypot(c.x - threeFingerTap.cx, c.y - threeFingerTap.cy);
+    if (dt < 400 && dist < 32) {
+      toggleParams();
+    }
+    threeFingerTap = null;
+  }
+  pointers.delete(e.pointerId);
+  if (pointers.size === 0) {
+    canvasPanning.value = false;
+  } else if (e.pointerType !== "mouse" && pointers.size === 2) {
+    // 双指平移中抬起一指又落回双指时，以当前质心重新锚定，避免跳变
+    const c = centroid();
+    panStart = { x: c.x, y: c.y, panX: panX.value, panY: panY.value };
+  }
+}
+
+/** 画布复位：双击调用；带 0.3s 回位过渡 */
+function resetPan(animated = false) {
+  if (animated) {
+    document.querySelector(".<tour-name>-tour")?.classList.add("pan-anim");
+    setTimeout(() => document.querySelector(".<tour-name>-tour")?.classList.remove("pan-anim"), 320);
+  }
+  panX.value = 0;
+  panY.value = 0;
+}
+
+// reset 会同时改步骤索引与全部配置，用一个标记让步骤 watch 跳过本次 tick，
+// 避免 reset 的低频落锤和 tick 叠在一起浑浊
+let muteNextTick = false;
+
+// 步骤切换时销毁重建 lil-gui，避免旧控制器残留；
+// 同时让激活目录项滚入可视区（移动端横滑 chips 必须跟手，否则当前步骤出画）
+watch(
+  () => tour.currentStepIndex.value,
+  async () => {
+    rebuildGui();
+    if (muteNextTick) {
+      muteNextTick = false;
+    } else {
+      sound.play("tick");
+    }
+    await nextTick();
+    tocListRef.value
+      ?.querySelector(".toc-item.active")
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }
+);
+
+// 用于 lil-gui 绑定的参数对象
+const guiParams = reactive<Record<string, number | string | boolean>>({});
+
+// 同步 tourConfig → guiParams（步骤切换重建配置后回填面板）
+watch(
+  () => tour.tourConfig,
+  () => {
+    for (const field of tour.currentGuiFields.value) {
+      const value = getConfigValue(tour.tourConfig, field.key);
+      // 同值跳过：lil-gui 拖动是 mousemove 级高频，避免镜像冗余写入；
+      // 也是 modifiedFields 不被程序化回填污染的前提
+      if (!Object.is(guiParams[field.key], value)) {
+        guiParams[field.key] = value;
+      }
+    }
+  },
+  { deep: true, immediate: true }
+);
+
+// 同步 guiParams → tourConfig（面板调参驱动预览）
+watch(
+  guiParams,
+  () => {
+    for (const field of tour.currentGuiFields.value) {
+      const value = guiParams[field.key];
+      if (!Object.is(getPathValue(tour.tourConfig, field.key), value)) {
+        tour.updateField(field.key, value);
+      }
+    }
+  },
+  { deep: true }
+);
+
+function getConfigValue(
+  config: TourConfig,
+  key: string
+): number | string | boolean {
+  const value = getPathValue(config, key);
+  if (
+    typeof value === "number" ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  return "";
+}
+
+function getPathValue(obj: TourConfig, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === "object") {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
+}
+
+function addController(field: GuiFieldDefinition) {
+  if (!gui) return null;
+  if (field.hidden) return null;
+
+  if (field.type === "color") {
+    return gui.addColor(guiParams, field.key).name(field.label);
+  } else if (field.type === "select" && field.options) {
+    return gui.add(guiParams, field.key, field.options).name(field.label);
+  } else if (field.type === "boolean") {
+    return gui.add(guiParams, field.key).name(field.label);
+  } else {
+    return gui.add(guiParams, field.key, field.min, field.max, field.step).name(field.label);
+  }
+}
+
+function rebuildGui() {
+  if (!guiContainerRef.value) return;
+
+  // 先把当前步骤字段同步进 guiParams：watch 默认 flush: 'pre' 按注册顺序执行，
+  // 步骤切换时本函数先于"tourConfig→guiParams"的同步 watch 执行，
+  // 缺初值的字段会让 lil-gui add() 无法推断控制器类型
+  for (const field of tour.currentGuiFields.value) {
+    const value = getConfigValue(tour.tourConfig, field.key);
+    if (!Object.is(guiParams[field.key], value)) {
+      guiParams[field.key] = value;
+    }
+  }
+
+  gui?.destroy();
+
+  gui = new GUI({
+    container: guiContainerRef.value,
+    title: "参数 · Params"
+  });
+
+  const fields = getGuiFieldsForStep(tour.currentStep.value.id);
+  if (fields.length === 0) {
+    // 空步骤占位：把提示文案放在标签位并标记 is-note 隐藏空输入框，
+    // 避免出现 "note" 这类无意义 key 名和一个孤零零的禁用文本框
+    const note = gui.add({ "本步骤无参数": "" }, "本步骤无参数").disable();
+    note.domElement.classList.add("is-note");
+    return;
+  }
+
+  for (const field of fields) {
+    const controller = addController(field);
+    if (!controller) continue;
+    // 连续型控件只在松手时发声，拖动途中保持安静
+    if (field.type !== "boolean") {
+      controller.onFinishChange(() => sound.play("scrub"));
+    }
+    // 布尔开关发声与联动写法：lil-gui 的 onChange 是单回调赋值，
+    // 多个副作用必须合并在同一个 handler 里，重复调用会互相覆盖：
+    // controller.onChange((value) => {
+    //   sound.play("toggle");
+    //   // ...联动其他控制器，如 durationCtrl.disable()
+    // });
+  }
+}
+
+function toggleParams() {
+  paramsOpen.value = !paramsOpen.value;
+  sound.play("toggle");
+}
+
+// 参数抽屉（移动端）打开时点击外部自动收起；桌面端 paramsOpen 恒为 false，监听不会激活
+watch(paramsOpen, (open) => {
+  if (open) {
+    document.addEventListener("pointerdown", onSheetOutsidePointerDown);
+  } else {
+    document.removeEventListener("pointerdown", onSheetOutsidePointerDown);
+  }
+});
+
+function onSheetOutsidePointerDown(e: PointerEvent) {
+  const target = e.target as Node;
+  if (paramsSheetRef.value?.contains(target) || paramsBtnRef.value?.contains(target)) return;
+  paramsOpen.value = false;
+}
+
+function onReset() {
+  muteNextTick = true;
+  sound.play("reset");
+  tour.reset();
+}
+
+// 键盘导航：录屏时比鼠标点按更稳
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === "ArrowLeft" && !tour.isFirst.value) {
+    tour.prev();
+  } else if (e.key === "ArrowRight" && !tour.isLast.value) {
+    tour.next();
+  }
+}
+</script>
+
+<style scoped>
+/* 图鉴风设计令牌：暖黑纸面 + 薄荷/奶油墨色，全部 OKLCH。
+   字族需在 nuxt.config 注入（Bodoni Moda / Noto Serif SC / Fragment Mono / Inter Tight），
+   注入片段见 references/website.md「字体」 */
+.<tour-name>-tour {
+  --bg-0: oklch(0.145 0.008 100);
+  --ink: oklch(0.94 0.012 105);
+  --ink-60: oklch(0.94 0.012 105 / 0.6);
+  --ink-50: oklch(0.94 0.012 105 / 0.5);
+  --ink-38: oklch(0.94 0.012 105 / 0.38);
+  --mint: oklch(0.93 0.1 155);
+  --mint-strong: oklch(0.86 0.16 165);
+  --cream: oklch(0.9 0.07 90);
+  --hairline: oklch(0.94 0.012 105 / 0.1);
+  /* 浮动面板：让画布透过来的半透明 + 背景虚化 */
+  --panel-bg: oklch(0.16 0.008 100 / 0.52);
+  --panel-blur: blur(22px) saturate(1.25);
+  --masthead-h: 76px;
+  --article-h: 320px;
+  --toc-w: 264px;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --font-serif: "Bodoni Moda", "Noto Serif SC", "Songti SC", serif;
+  --font-mono: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--ink);
+  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  font-size: 18px;
+  color-scheme: dark;
+}
+
+.<tour-name>-tour.dragging-v {
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.<tour-name>-tour.dragging-h {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+/* 印刷颗粒：极低透明度的噪点，soft-light 混入，模拟纸张质感 */
+.<tour-name>-tour::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* 深色细滚动条：默认浅色滚动条在暗底上非常刺眼；
+   grid/flex 子项 min-width:0 防内容 min-content 顶破容器 */
+.<tour-name>-tour * {
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.94 0.012 105 / 0.18) transparent;
+}
+
+.<tour-name>-tour *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.<tour-name>-tour *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.<tour-name>-tour *::-webkit-scrollbar-thumb {
+  background: oklch(0.94 0.012 105 / 0.16);
+  border-radius: 4px;
+}
+
+/* 目录横滑列表完全隐藏滚动条，截图保持干净 */
+.toc-list {
+  scrollbar-width: none;
+}
+
+.toc-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== 全屏标本画布（z-0，所有面板浮于其上） ===== */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* 放映暗角：把视线压向中央的展品；挂在 stage 而非 canvas 上，画布平移时暗角不动 */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 42%, transparent 55%, oklch(0.1 0.006 100 / 0.5) 100%);
+}
+
+.stage-canvas {
+  position: absolute;
+  /* 可见区适配：内嵌到「报头以下、目录以右、文章区以上」的矩形，
+     展品默认完整落在浮动面板之外；预览内容须随容器尺寸自适应
+     （WebGL 类预览用 ResizeObserver 观测本节点并同步视口） */
+  top: var(--masthead-h);
+  left: var(--toc-w);
+  right: 0;
+  bottom: var(--article-h);
+  overflow: hidden;
+  transform: translate(var(--pan-x, 0px), var(--pan-y, 0px));
+  /* 默认光标不暗示拖拽：普通拖拽是预览内容自身交互（如轨道控制器旋转），
+     只有 ⌘ 按下（pan-ready）才进入画布平移语义 */
+  cursor: default;
+  /* 触屏手势完全自管（双指平移/三指点按），不交还给浏览器滚动与缩放 */
+  touch-action: none;
+}
+
+.pan-ready .stage-canvas {
+  cursor: grab;
+}
+
+.panning .stage-canvas {
+  cursor: grabbing;
+}
+
+.pan-anim .stage-canvas {
+  transition: transform 0.3s var(--ease-out-quart);
+}
+
+.fig-caption {
+  position: absolute;
+  left: calc(var(--toc-w) + 24px);
+  bottom: calc(var(--article-h) + 14px);
+  z-index: 11;
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--ink-50);
+  animation: cap-in 0.5s var(--ease-out-quart) both;
+}
+
+@keyframes cap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ===== 报头（半透明浮动面板） ===== */
+.masthead {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: var(--masthead-h);
+  padding: 0 28px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--panel-bg);
+  backdrop-filter: var(--panel-blur);
+  -webkit-backdrop-filter: var(--panel-blur);
+}
+
+.masthead-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  min-width: 0;
+}
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-optical-sizing: auto;
+  /* 油墨纹理：灰度噪点叠在纯色墨层上裁进字形，凸版印刷颗粒感；
+     刻意不用彩色渐变——渐变文字是装饰性陈词 */
+  color: transparent;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E"),
+    linear-gradient(oklch(0.94 0.012 105), oklch(0.94 0.012 105));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.masthead-sub {
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-38);
+  white-space: nowrap;
+}
+
+.masthead-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.meta-step {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--ink-60);
+}
+
+.meta-progress {
+  width: 96px;
+  height: 2px;
+  background: var(--hairline);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.meta-progress i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+  transition: width 0.4s var(--ease-out-quart);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mint);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.icon-btn:hover {
+  background: oklch(0.94 0.012 105 / 0.06);
+}
+
+.icon-btn .slash {
+  display: none;
+}
+
+.icon-btn.off {
+  color: var(--ink-38);
+}
+
+.icon-btn.off .wave {
+  display: none;
+}
+
+.icon-btn.off .slash {
+  display: block;
+}
+
+.params-btn {
+  display: none;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-60);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+/* ===== 目录（半透明浮动面板，底边跟随文章区高度） ===== */
+.toc {
+  position: fixed;
+  top: var(--masthead-h);
+  left: 0;
+  bottom: var(--article-h);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: var(--toc-w);
+  padding: 20px 16px;
+  border-right: 1px solid var(--hairline);
+  background: var(--panel-bg);
+  backdrop-filter: var(--panel-blur);
+  -webkit-backdrop-filter: var(--panel-blur);
+}
+
+.toc-label {
+  margin: 0 4px 16px;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-38);
+}
+
+.toc-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.toc-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 13px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-60);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.toc-item:hover {
+  background: oklch(0.94 0.012 105 / 0.05);
+}
+
+.toc-item.active {
+  background: oklch(0.93 0.1 155 / 0.08);
+  color: var(--ink);
+}
+
+.toc-num {
+  min-width: 30px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--ink-38);
+  transition: color 0.2s;
+}
+
+.toc-item.active .toc-num {
+  color: var(--mint);
+}
+
+.toc-title {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.toc-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 0 4px;
+}
+
+.toc-nav {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-60);
+  font-size: 17px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.toc-nav:hover:not(:disabled) {
+  background: oklch(0.94 0.012 105 / 0.06);
+  color: var(--ink);
+}
+
+.toc-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.toc-reset {
+  flex: 1;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-60);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.toc-reset:hover {
+  background: oklch(0.94 0.012 105 / 0.06);
+  color: var(--ink);
+}
+
+.toc-foot {
+  margin: 14px 4px 0;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink-38);
+}
+
+/* 目录右缘拖拽把手（桌面端） */
+.toc-grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  width: 10px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.toc-grip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 56px;
+  border-radius: 1px;
+  background: transparent;
+  transform: translateY(-50%);
+  transition: background 0.2s;
+}
+
+.toc-grip:hover::after,
+.dragging-h .toc-grip::after {
+  background: var(--mint);
+}
+
+/* ===== 参数面板 ===== */
+.params-sheet {
+  position: fixed;
+  top: calc(var(--masthead-h) + 14px);
+  right: 16px;
+  z-index: 40;
+}
+
+.sheet-head {
+  display: none;
+}
+
+.tour-gui {
+  max-height: calc(100vh - var(--masthead-h) - 28px);
+  overflow-y: auto;
+}
+
+.tour-gui :deep(.lil-gui) {
+  --background-color: oklch(0.19 0.01 100 / 0.9);
+  --text-color: oklch(0.94 0.012 105 / 0.85);
+  --title-background-color: oklch(0.93 0.1 155 / 0.1);
+  --widget-color: oklch(0.94 0.012 105 / 0.1);
+  --hover-color: oklch(0.94 0.012 105 / 0.16);
+  --focus-color: oklch(0.93 0.1 155 / 0.4);
+  --number-color: var(--mint-strong);
+  --string-color: var(--mint);
+  --font-family: "Fragment Mono", ui-monospace, monospace;
+  --font-size: 14px;
+  --input-font-size: 14px;
+  --widget-height: 30px;
+  --name-width: 36%;
+
+  border-radius: 12px;
+  box-shadow: 0 8px 32px oklch(0.1 0.006 100 / 0.55);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline);
+}
+
+/* 新版 lil-gui 根类名是 lil-root 不是 root，写错选择器宽度会静默失效 */
+.tour-gui :deep(.lil-gui.lil-root) {
+  width: 320px;
+}
+
+/* 标题栏按钮继承容器圆角，否则矩形背景会戳出 root 的圆角 */
+.tour-gui :deep(.lil-gui .lil-title) {
+  border-radius: inherit;
+}
+
+/* 展开时标题栏底角与内容区相接，底角需为直角；收起时才保留全圆角 */
+.tour-gui :deep(.lil-gui.lil-root > .lil-title[aria-expanded="true"]) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ===== lil-gui 字段打磨 ===== */
+/* 行布局：name 字数不一导致控件列参差不齐——name 改自然宽度，
+   widget 限宽并 margin-left:auto 右对齐，行内控件按统一规则排布 */
+.tour-gui :deep(.lil-controller) {
+  align-items: center;
+}
+
+.tour-gui :deep(.lil-controller + .lil-controller) {
+  margin-top: 8px;
+}
+
+.tour-gui :deep(.lil-name) {
+  width: auto;
+  flex: none;
+}
+
+.tour-gui :deep(.lil-widget) {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 216px;
+  margin-left: auto;
+}
+
+/* 文本输入统一为能容纳 6 位 hex 的固定宽度，各类控件的右边缘由此对齐 */
+.tour-gui :deep(.lil-widget input[type="text"]) {
+  width: 68px;
+  flex: none;
+}
+
+/* 数字滑杆与色板吃掉 name 与输入框之间的剩余空间 */
+.tour-gui :deep(.lil-slider) {
+  flex: 1;
+  align-self: center;
+  min-width: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: oklch(0.94 0.012 105 / 0.14);
+  overflow: hidden;
+}
+
+.tour-gui :deep(.lil-slider .lil-fill) {
+  background: var(--mint-strong);
+  border-radius: 999px;
+}
+
+.tour-gui :deep(.lil-display) {
+  flex: 1;
+}
+
+/* 布尔开关：单独占一行控件位时右对齐，与输入框右边缘齐平 */
+.tour-gui :deep(.lil-boolean .lil-widget) {
+  justify-content: flex-end;
+}
+
+/* 数字输入框：右对齐小胶囊，与滑杆视觉分层 */
+.tour-gui :deep(.lil-number input) {
+  background: oklch(0.94 0.012 105 / 0.07);
+  border-radius: 6px;
+  text-align: right;
+}
+
+/* 布尔控件：原生勾选框换成拨杆开关 */
+.tour-gui :deep(.lil-boolean .lil-widget input) {
+  appearance: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  border-radius: 999px;
+  background: oklch(0.94 0.012 105 / 0.14);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tour-gui :deep(.lil-boolean .lil-widget input)::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: oklch(0.94 0.012 105 / 0.7);
+  transition: transform 0.2s var(--ease-out-quart), background 0.2s;
+}
+
+.tour-gui :deep(.lil-boolean .lil-widget input:checked) {
+  background: var(--mint-strong);
+}
+
+.tour-gui :deep(.lil-boolean .lil-widget input:checked)::after {
+  transform: translateX(18px);
+  background: oklch(0.16 0.008 100);
+}
+
+/* 禁用态（如总开关关闭时的关联滑杆） */
+.tour-gui :deep(.lil-controller.lil-disabled) {
+  opacity: 0.45;
+}
+
+/* 空步骤占位行只留文案，藏掉多余输入框 */
+.tour-gui :deep(.is-note .lil-widget) {
+  display: none;
+}
+
+/* ===== 文章区（半透明浮动面板，上边缘可拖拽） ===== */
+.article-slot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  height: var(--article-h);
+  border-top: 1px solid var(--hairline);
+  background: var(--panel-bg);
+  backdrop-filter: var(--panel-blur);
+  -webkit-backdrop-filter: var(--panel-blur);
+}
+
+.article-grip {
+  flex: 0 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  /* 触屏拖拽不被滚动劫持 */
+  touch-action: none;
+}
+
+.article-grip::after {
+  content: "";
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-38);
+  transition: background 0.2s, width 0.2s;
+}
+
+.article-grip:hover::after,
+.dragging-v .article-grip::after {
+  width: 64px;
+  background: var(--mint);
+}
+
+.article {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 32px;
+  overflow-y: auto;
+  padding: 8px 28px 24px;
+}
+
+.folio {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mint);
+}
+
+.article-title {
+  margin: 0 0 14px;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  /* 与报头 wordmark 同字号，形成全页统一的展示级标题锚点 */
+  font-size: 38px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.article-desc {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--ink-60);
+}
+
+.article-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 30px;
+}
+
+/* 关键技术与代码位置统一排版：标签 + 胶囊芯片行 */
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-38);
+}
+
+.code-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.code-link code {
+  display: inline-block;
+  padding: 5px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-60);
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.code-link:hover code {
+  color: var(--mint);
+  border-color: oklch(0.93 0.1 155 / 0.45);
+  background: oklch(0.93 0.1 155 / 0.08);
+}
+
+.code-missing {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: oklch(0.7 0.19 25);
+}
+
+.tour-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-38);
+}
+
+/* ===== 步骤过渡与入场编排 ===== */
+.stepfade-enter-active {
+  transition: opacity 0.28s var(--ease-out-quart) 0.05s, transform 0.28s var(--ease-out-quart) 0.05s;
+}
+
+.stepfade-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.stepfade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.stepfade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.masthead,
+.toc,
+.stage,
+.article-slot {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.7s var(--ease-out-quart), transform 0.7s var(--ease-out-quart);
+}
+
+.booted .masthead {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.02s;
+}
+
+.booted .toc {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.12s;
+}
+
+.booted .stage {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.2s;
+}
+
+.booted .article-slot {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.28s;
+}
+
+.toc-item {
+  opacity: 0;
+  transform: translateX(-6px);
+  /* reveal 错峰 delay 仅作用于 opacity/transform；hover 的 background/color 保持 0 delay，手感不拖 */
+  transition: opacity 0.5s var(--ease-out-quart) var(--reveal-delay, 0s),
+    transform 0.5s var(--ease-out-quart) var(--reveal-delay, 0s), background 0.2s, color 0.2s;
+}
+
+.booted .toc-item {
+  opacity: 1;
+  transform: none;
+}
+
+/* 篇章标题行：组间留白分隔各幕，非交互（pointer-events:none 兜底，模板已非 button）；
+   不另设 reveal 延迟，随 .toc 容器级淡入即可，避免标题与首项错峰割裂 */
+.toc-act-title {
+  margin: 16px 6px 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-38);
+  pointer-events: none;
+}
+
+/* 首幕标题顶边不留白，避免目录顶端空一行 */
+.toc-list > .toc-act-title:first-child {
+  margin-top: 2px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1100px) {
+  .article {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .<tour-name>-tour {
+    --masthead-h: 64px;
+  }
+
+  .masthead {
+    align-items: center;
+    padding: 0 16px;
+  }
+
+  .wordmark {
+    font-size: 26px;
+  }
+
+  .masthead-sub {
+    display: none;
+  }
+
+  /* 报头右侧 390px 放不下完整期号组；期号在文章区 folio 已有重复信息 */
+  .meta-step,
+  .meta-progress {
+    display: none;
+  }
+
+  .params-btn {
+    display: inline-flex;
+  }
+
+  /* 目录变顶部横滑 chips，仍是半透明浮动面板 */
+  .toc {
+    top: var(--masthead-h);
+    left: 0;
+    right: 0;
+    bottom: auto;
+    width: auto;
+    padding: 10px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  /* 移动端目录是全宽 chips 横滑条：左侧不再被占用（left 归零）；
+     其高度随内容自适应，底边无法纯 CSS 表达，由 JS 量测写入 --toc-bottom */
+  .stage-canvas {
+    left: 0;
+    top: var(--toc-bottom, calc(var(--masthead-h) + 100px));
+  }
+
+  .toc-label,
+  .toc-foot,
+  /* 移动端 chips 横滑条不插篇章标题行：步骤已够长，标题会割裂横滑节奏 */
+  .toc-act-title {
+    display: none;
+  }
+
+  .toc-grip {
+    display: none;
+  }
+
+  .toc-list {
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 2px;
+  }
+
+  .toc-item {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: oklch(0.94 0.012 105 / 0.05);
+    scroll-snap-align: start;
+  }
+
+  .toc-num {
+    min-width: 0;
+    font-size: 18px;
+  }
+
+  .toc-title {
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .toc-actions {
+    margin-top: 10px;
+  }
+
+  .fig-caption {
+    left: 14px;
+    bottom: calc(var(--article-h) + 12px);
+    font-size: 14px;
+  }
+
+  .article {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 4px 18px 18px;
+  }
+
+  .article-title {
+    font-size: 30px;
+  }
+
+  .article-side {
+    padding-top: 0;
+  }
+
+  /* 参数面板变底部抽屉：用更亮更不透明的底色 + 更强描边与阴影，
+     与同样半透明的文章区拉开层级，否则会糊成一片 */
+  .params-sheet {
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: calc(var(--article-h) + 8px);
+    z-index: 60;
+    background: oklch(0.25 0.014 105 / 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid oklch(0.94 0.012 105 / 0.2);
+    border-radius: 14px;
+    box-shadow: 0 -12px 48px oklch(0.08 0.005 100 / 0.7);
+    /* 关闭态：自身高度 + 文章区高度 + 边距一起下移，确保完全藏到屏幕外；
+       打开时回到 bottom: article-h+8，正好卡在文章区上沿 */
+    transform: translateY(calc(100% + var(--article-h) + 24px));
+    transition: transform 0.38s var(--ease-out-quart);
+  }
+
+  /* 抽屉顶部的握持胶囊，传达"可拉起/可收起"的区域感 */
+  .params-sheet::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: oklch(0.94 0.012 105 / 0.3);
+    transform: translateX(-50%);
+  }
+
+  .params-open .params-sheet {
+    transform: none;
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    color: var(--ink-60);
+  }
+
+  .sheet-close {
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-60);
+    font-size: 14px;
+    padding: 5px 14px;
+    cursor: pointer;
+  }
+
+  .params-sheet .tour-gui {
+    max-height: 46vh;
+    padding: 8px;
+  }
+
+  .tour-gui :deep(.lil-gui.lil-root) {
+    width: 100%;
+  }
+
+  /* 抽屉自带头部，lil-gui 根标题栏重复，隐藏 */
+  .tour-gui :deep(.lil-gui.lil-root > .lil-title) {
+    display: none;
+  }
+}
+</style>

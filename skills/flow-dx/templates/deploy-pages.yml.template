@@ -1,0 +1,80 @@
+# GitHub Pages 部署工作流模板（actions artifact 部署，无 gh-pages 分支）
+#
+# 用法：复制为 <repo-root>/.github/workflows/deploy-pages.yml，按注释调整三处项目化点：
+#   1. paths 过滤清单（影响站点产物的输入路径，漏配会导致该部署时不部署）
+#   2. Build 步骤的 --dir 与 script 名（站点包非根时指向子包）
+#   3. upload-pages-artifact 的 path（产物目录，Nuxt 为 <sitePkg>/.output/public，Vite 为 <sitePkg>/dist）
+#
+# 站点为 Vite SPA 时另有两处差异：
+#   - Build 的 env 改为 VITE_APP_BASE_URL（Nuxt 用 NUXT_APP_BASE_URL）
+#   - 站点包以 workspace:* 直引库包且其 exports 指向 dist 时，须前置一步构建库包
+#
+# 生效前提：仓库 Settings → Pages → Source = GitHub Actions
+#   gh api repos/<owner>/<repo>/pages -X POST -f "build_type=workflow"（已存在则 POST 改 PATCH）
+name: deploy-pages
+
+on:
+  push:
+    branches: [master]
+    # 项目化点 1：按实际结构调整——列出影响站点产物的全部输入
+    paths:
+      - playground/**      # 站点包本体
+      - src/**             # 被 alias 直引的库源码（无此依赖关系则删）
+      - build/**           # 自定义 vite 插件（无则删）
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/deploy-pages.yml
+  workflow_dispatch:
+
+# 同一时刻只允许一个 Pages 部署，避免并发发布互相覆盖
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm/action-setup@v4 必须显式 version：无 packageManager 字段时 action 无法解析版本
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # baseURL 须为 /<repo>/ 子路径，构建期固化进 asset 路径；
+      # 用事件变量而非硬编码仓库名，fork/改名场景零改动
+      # 项目化点 2：站点包在根时改为 pnpm build:pages
+      - name: Build playground site
+        run: pnpm --dir playground build:pages
+        env:
+          NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+
+      # 项目化点 3：产物路径（Nuxt github_pages preset 输出 <sitePkg>/.output/public）
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: playground/.output/public
+
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "version",
+    "task_slug",
+    "repo_root",
+    "working_dir",
+    "original_branch",
+    "phase",
+    "depth",
+    "start_time",
+    "updated_at"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1"]
+    },
+    "skill_versions": {
+      "type": "object",
+      "description": "生成/最近更新本状态时各技能的 metadata.version（flow-dev 自身及参与技能）；resume 漂移判定的数据源。旧版本技能生成的 state.json 无此字段，判定逻辑需容忍缺失",
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "task_slug": {
+      "type": "string"
+    },
+    "repo_root": {
+      "type": "string"
+    },
+    "working_dir": {
+      "type": "string"
+    },
+    "original_branch": {
+      "type": "string"
+    },
+    "worktree_branch": {
+      "type": ["string", "null"]
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "initialized",
+        "thinking",
+        "grilling",
+        "prd-written",
+        "devgoal",
+        "slicing",
+        "developing",
+        "code-review",
+        "review",
+        "fixing",
+        "reporting",
+        "merging",
+        "done",
+        "blocked",
+        "merge-conflict"
+      ]
+    },
+    "depth": {
+      "type": "string",
+      "enum": ["mvp", "prod", "hifi"]
+    },
+    "flags": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["light", "full", "quick", "dev", "fix"] },
+        "dissection": { "type": "boolean" },
+        "worktree": { "type": "boolean" },
+        "skip_review": { "type": "boolean" },
+        "interactive": { "type": "boolean" },
+        "dry_run": { "type": "boolean" },
+        "stage": { "type": "boolean" },
+        "stop": {
+          "type": ["string", "null"],
+          "enum": ["dissection", "thinking", "prd", "devgoal", "slice", null]
+        }
+      }
+    },
+    "stop_after": {
+      "type": ["string", "null"],
+      "enum": ["dissection", "thinking", "prd", "devgoal", "slice", null]
+    },
+    "slices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "developing", "reviewing", "fixing", "done", "blocked"]
+          },
+          "bugs_path": { "type": ["string", "null"] },
+          "commits": {
+            "type": "array",
+            "description": "auto-commit 模式下本 Slice 已执行的提交（开发中子任务提交 + Step 7 收尾提交），按执行顺序排列；--stage 模式恒为空数组或缺省",
+            "items": {
+              "type": "object",
+              "properties": {
+                "hash": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          },
+          "commit_plan": {
+            "type": "array",
+            "description": "--stage 模式下本 Slice 的提交计划（建议 message + 文件清单，Slice 内多 commit 时逐条列出）；auto-commit 模式恒为空数组或缺省",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string" },
+                "files": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          },
+          "start_time": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+          },
+          "end_time": {
+            "type": ["string", "null"],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+          }
+        }
+      }
+    },
+    "current_slice_index": {
+      "type": "integer"
+    },
+    "fix_round": {
+      "type": "integer"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "question": { "type": "string" },
+          "assumption": { "type": "string" },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "verification": { "type": "string" },
+          "evidence": { "type": "string" },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          }
+        }
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" },
+          "task": { "type": "string" },
+          "caller_model": {
+            "type": "string",
+            "enum": ["kimi-k3", "kimi-k3-full", "glm-5.3", "qwen-3.8-max", "deepseek-v4-flash", "minimax-m3"]
+          },
+          "effort": {
+            "type": "string",
+            "enum": ["normal", "max", "ultra", "fable"]
+          },
+          "start_time": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+          },
+          "end_time": {
+            "type": ["string", "null"],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "target_model": {
+                  "type": "string",
+                  "enum": ["kimi-k3", "kimi-k3-full", "glm-5.3", "qwen-3.8-max", "deepseek-v4-flash", "minimax-m3"]
+                },
+                "launcher": { "type": "string" },
+                "status": {
+                  "type": "string",
+                  "enum": ["pending", "skipped", "success", "degraded", "failed"]
+                },
+                "prompt_path": { "type": ["string", "null"] },
+                "result_path": { "type": ["string", "null"] },
+                "error": { "type": ["string", "null"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "phase": { "type": "string" },
+          "description": { "type": "string" },
+          "timestamp": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "ultrathoughts_path": { "type": ["string", "null"] },
+        "dissection_path": { "type": ["string", "null"] },
+        "decisions_path": { "type": ["string", "null"] },
+        "prd_path": { "type": ["string", "null"] },
+        "devgoal_path": { "type": ["string", "null"] },
+        "bugs_path": { "type": ["string", "null"] },
+        "report_path": { "type": ["string", "null"] }
+      }
+    },
+    "start_time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+    },
+    "updated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+    },
+    "end_time": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+    }
+  }
+}

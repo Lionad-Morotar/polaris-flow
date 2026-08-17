@@ -1,0 +1,47 @@
+/**
+ * 编辑器跳转：精简自 vue-source-lens 的 editor-url / lens-runtime。
+ *
+ * 通过临时隐藏 iframe 触发自定义协议：浏览器对 window.open 打开外部协议的
+ * 行为不一致（可能开空白页），iframe 加载是最稳的跨浏览器方式；
+ * 协议未注册时当前页面不受影响，1s 后移除 iframe。
+ *
+ * 编辑器选择：vue-source-lens 的 detectEditor 只读 VUE_EDITOR 等环境变量，
+ * 无法感知本机安装，浏览器里 process.env 也不可用。正解是在 Node 侧探测
+ * （nuxt.config 用 fs.existsSync 检查 /Applications 并注入 runtimeConfig），
+ * 见 references/website.md「代码位置跳转」章节。
+ */
+
+const EDITOR_SCHEMES: Record<string, (absolutePath: string, line: number) => string> = {
+  vscode: (abs, line) => `vscode://file${abs}:${line}`,
+  "vscode-insiders": (abs, line) => `vscode-insiders://file${abs}:${line}`,
+  cursor: (abs, line) => `cursor://file${abs}:${line}`,
+  windsurf: (abs, line) => `windsurf://file${abs}:${line}`
+};
+
+/**
+ * 在编辑器中打开指定文件行号。
+ * editor 由调用方决定（本机探测值或 localStorage 覆盖），缺省 vscode。
+ */
+export function openInEditor(
+  fileName: string,
+  line: number,
+  projectRoot: string,
+  editor?: string
+): void {
+  const absolutePath = fileName.startsWith("/") ? fileName : `${projectRoot}/${fileName}`;
+  const build = EDITOR_SCHEMES[(editor || "vscode").toLowerCase()] ?? EDITOR_SCHEMES["vscode"]!;
+  const url = build(absolutePath, line);
+
+  const iframe = document.createElement("iframe");
+  Object.assign(iframe.style, {
+    position: "fixed",
+    width: "0",
+    height: "0",
+    border: "0",
+    visibility: "hidden"
+  });
+  iframe.setAttribute("aria-hidden", "true");
+  document.body.appendChild(iframe);
+  iframe.src = url;
+  setTimeout(() => iframe.remove(), 1000);
+}

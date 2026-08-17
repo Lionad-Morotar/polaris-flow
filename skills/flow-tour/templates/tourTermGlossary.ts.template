@@ -1,0 +1,17 @@
+/**
+ * 基础名词释义词典（扫盲层）。
+ *
+ * 与 <tourName>TechniqueGlossary 分工：本词典回答"这个概念是什么"，
+ * 面向没接触过该领域的读者，用一两句话给出定义 + 本例里的落点；
+ * technique 词典回答"这个技巧怎么做"，是可迁移的 how-to。
+ * 键即页面标签显示的中文词条。写作要求：
+ * - 面向扫盲：定义 + 直觉，1-2 句，不复述参考对象
+ * - 守护测试（TourTermGlossary.spec）要求词条与步骤 glossary 双向覆盖，
+ *   且每步 glossary + techniques 标签总数 ≥ 8
+ */
+export const <tourName>TermGlossary: Record<string, string> = {
+  // 示例：
+  // "锥形渐变":
+  //   "conic-gradient，从元素中心出发绕圆心一圈在色标之间插值的 CSS 渐变。" +
+  //   "本例里它是光晕最底层的'色盘'概念，再经 blur 柔化让色带交界融成流动的光。",
+};

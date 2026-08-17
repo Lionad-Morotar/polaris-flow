@@ -1,0 +1,9 @@
+{
+  "name": "flow-skills",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node skills/flow-skill/scripts/lint.mjs skills",
+    "bump": "node skills/flow-skill/scripts/bump.mjs"
+  }
+}

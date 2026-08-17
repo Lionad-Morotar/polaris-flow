@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vitest";
+import { <tourName>TechniqueGlossary } from "../../../app/config/tour/<tour-name>TechniqueGlossary";
+import { <TourName>TourSteps } from "../../../app/config/tour/<tour-name>TourSteps";
+
+/**
+ * 技术标签词典与步骤文案的教学质量守护：
+ * 每个标签必须有详解可展示；步骤描述聚焦 how-to，不复述参考对象。
+ */
+describe("<TourName> 技术词典与步骤文案", () => {
+  it("每个技术标签都有 glossary 详解", () => {
+    for (const step of <TourName>TourSteps) {
+      for (const tech of step.techniques) {
+        expect(
+          <tourName>TechniqueGlossary[tech],
+          `标签「${tech}」缺少 glossary 详解（step: ${step.id}）`
+        ).toBeTruthy();
+      }
+    }
+  });
+
+  it("glossary 没有孤儿词条（词条必须被某步引用）", () => {
+    const used = new Set(<TourName>TourSteps.flatMap((s) => s.techniques));
+    for (const key of Object.keys(<tourName>TechniqueGlossary)) {
+      expect(used.has(key), `词条「${key}」未被任何步骤引用`).toBe(true);
+    }
+  });
+
+  // 步骤描述应当教"怎么做"，而不是复述参考对象（原站/原库）的实现
+  it('步骤描述聚焦 how-to，不出现"原站"式复述', () => {
+    for (const step of <TourName>TourSteps) {
+      expect(step.description, `step ${step.id} 描述含"原站"`).not.toContain("原站");
+      expect(step.title, `step ${step.id} 标题含"原站"`).not.toContain("原站");
+    }
+  });
+});

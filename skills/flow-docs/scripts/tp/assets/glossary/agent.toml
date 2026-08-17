@@ -1,0 +1,42 @@
+# Agent Domain Glossary
+# 智能体领域术语表
+
+domain = "agent"
+description = "智能体领域的术语表"
+when_to_use = "当翻译内容涉及 AI Agent、智能体、Skill、技能、Workflow、工作流、LLM、大语言模型、Prompt、提示词、 Claude、OpenAI 等人工智能相关概念时使用"
+
+[[rules]]
+term = "agent"
+action = "translate"
+translation = "智能体"
+reason = "agent 统一翻译为智能体"
+
+[[rules]]
+term = "AI Agent"
+action = "translate"
+translation = "AI 智能体"
+reason = "AI Agent 翻译为 AI 智能体"
+
+[[rules]]
+term = "skill"
+action = "keep"
+translation = "skill"
+reason = "在智能体领域，skill 是核心概念，保留英文术语"
+
+[[rules]]
+term = "workflow"
+action = "translate"
+translation = "工作流"
+reason = "workflow 翻译为工作流"
+
+[[rules]]
+term = "LLM"
+action = "translate"
+translation = "大语言模型"
+reason = "LLM 翻译为大语言模型"
+
+[[rules]]
+term = "prompt"
+action = "translate"
+translation = "提示词"
+reason = "prompt 翻译为提示词"

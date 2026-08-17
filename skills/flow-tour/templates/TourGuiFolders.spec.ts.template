@@ -1,0 +1,66 @@
+import { describe, expect, it } from "vitest";
+import { <TourName>TourGuiFields } from "~/config/tour/<tour-name>TourGuiFolders";
+import { buildTourConfig, <TourName>TourSteps } from "~/config/tour/<tour-name>TourSteps";
+
+/**
+ * 收集 step patch 中所有字段路径（支持嵌套 effect.*）。
+ */
+function collectPatchFields(steps: typeof <TourName>TourSteps): string[] {
+  const fields = new Set<string>();
+  for (const step of steps) {
+    for (const [key, value] of Object.entries(step.patch)) {
+      if (key === "effect" && typeof value === "object" && value !== null) {
+        for (const effectKey of Object.keys(value)) {
+          fields.add(`effect.${effectKey}`);
+        }
+      } else {
+        fields.add(key);
+      }
+    }
+  }
+  return [...fields];
+}
+
+describe("<TourName> Tour GUI Folders", () => {
+  it("每个可调 patch 字段都有 GUI 元数据", () => {
+    // hidden 字段（如仅用于切换场景的 scene）也允许出现在 patch 中，
+    // hidden: true 即"不可调"的显式声明——这里只要求元数据存在，不过滤 hidden
+    const guiKeys = new Set(
+      <TourName>TourGuiFields.map((f) => f.key)
+    );
+    const patchFields = collectPatchFields(<TourName>TourSteps
+    );
+
+    for (const field of patchFields) {
+      expect(
+        guiKeys.has(field),
+        `patch 字段 "${field}" 缺少 GUI 元数据`
+      ).toBe(true);
+    }
+  });
+
+  it("每个 GUI 字段引用的 stepId 都存在", () => {
+    const stepIds = new Set(<TourName>TourSteps.map((s) => s.id));
+    for (const field of <TourName>TourGuiFields) {
+      expect(
+        stepIds.has(field.stepId),
+        `GUI 字段 "${field.key}" 引用不存在的 stepId: ${field.stepId}`
+      ).toBe(true);
+    }
+  });
+
+  it("每个 GUI 字段都能被 buildTourConfig 产出（反向覆盖）", () => {
+    // 守护"可调但仅靠 baseConfig 兜底"的字段：若有人误删 baseConfig
+    // 中对应字段，verifyTourMatchesDefault 可能仍绿，但这里会红
+    const finalConfig = buildTourConfig(<TourName>TourSteps.length - 1) as Record<
+      string,
+      unknown
+    >;
+    for (const field of <TourName>TourGuiFields) {
+      expect(
+        finalConfig[field.key],
+        `GUI 字段 "${field.key}" 不在 buildTourConfig 产出中`
+      ).toBeDefined();
+    }
+  });
+});

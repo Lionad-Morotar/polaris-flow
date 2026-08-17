@@ -1,0 +1,71 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  resolveMarkers,
+  writeCodeTour,
+  writeMarkerJson,
+  type MarkerLocation,
+  type TourStepLike
+} from "./tour-marker-resolver.js";
+import { <TourName>TourSteps } from "../config/tour/<tour-name>TourSteps.js";
+
+/**
+ * <TourName> Tour marker 解析 CLI。
+ *
+ * 本脚本为薄封装，实际扫描与产物写入逻辑来自 `./tour-marker-resolver.ts`。
+ * 默认生成 `assets/tour/<tour-name>-tour-markers.json`；
+ * 传入 `--vscode-tour` 时进入 CodeTour-only 模式，仅生成 `.vscode/tours/<taskname>.tour`。
+ *
+ * 若项目有多个 tour，可参考 `scripts/resolve-<project>-tours.ts` 模式：
+ * 用一个 `TOURS[]` 数组集中注册所有 tour，统一生成全部 `.tour` 文件。
+ */
+
+const repoRoot = resolve(fileURLToPath(import.meta.url), "..", "..");
+
+function toTourStepLike(step: (typeof <TourName>TourSteps)[number]): TourStepLike {
+  return {
+    id: step.id,
+    title: step.title,
+    description: step.description,
+    codeLocations: step.codeLocations
+  };
+}
+
+export function resolve<TourName>TourMarkers(): Record<string, MarkerLocation> {
+  return resolveMarkers({
+    sourceDirs: [
+      // TODO: 替换为实际源码目录
+      "src",
+      "lib",
+      "packages/core/src",
+      "components/designer"
+    ],
+    repoRoot,
+    steps: <TourName>TourSteps.map(toTourStepLike)
+  });
+}
+
+function main(): void {
+  const markers = resolve<TourName>TourMarkers();
+  const isVsCodeTour = process.argv.includes("--vscode-tour");
+
+  if (isVsCodeTour) {
+    const outputPath = resolve(repoRoot, ".vscode/tours/<taskname>.tour");
+    writeCodeTour({
+      title: "<TourName> Tour",
+      markers,
+      steps: <TourName>TourSteps.map(toTourStepLike),
+      outputPath
+    });
+    console.log(`[<tour-name>-tour] 已生成 CodeTour ${outputPath}，共 ${Object.keys(markers).length} 个 marker`);
+    return;
+  }
+
+  const outputPath = resolve(repoRoot, "assets/tour/<tour-name>-tour-markers.json");
+  writeMarkerJson(markers, outputPath);
+  console.log(`[<tour-name>-tour] 已生成 ${outputPath}，共 ${Object.keys(markers).length} 个 marker`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

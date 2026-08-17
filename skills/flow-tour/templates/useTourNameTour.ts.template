@@ -1,0 +1,120 @@
+import { computed, reactive, readonly, ref } from "vue";
+import {
+  getGuiFieldsForStep,
+  type GuiFieldDefinition
+} from "~/config/tour/<tour-name>TourGuiFolders";
+import {
+  buildTourConfig,
+  <TourName>TourSteps,
+  type TourConfig,
+  type TourStep
+} from "~/config/tour/<tour-name>TourSteps";
+
+/**
+ * <TourName> Tour 状态管理。
+ *
+ * 维护当前步骤、合并后的 tourConfig，以及通过 lil-gui 触发的字段更新。
+ * 本模板基于泛型 `TourConfig`，不假设任何具体特性类型。
+ *
+ * 调参跨步骤保留：updateField 记录用户改过的字段路径，切换步骤时这些字段
+ * 保留用户值，其余字段跟随目标步骤的教学默认值；reset 清空全部修改记录。
+ * 前进时新步骤只"增量引入"自己的参数，回退时未被碰过的字段仍回到该步骤
+ * 的叙事状态。rebuildConfig 用 Object.assign 保持 tourConfig 引用稳定。
+ *
+ * 前提：页面的双向同步必须有同值跳过（Object.is），程序化回填不会触发
+ * updateField，否则 modifiedFields 会被污染。
+ */
+export function use<TourName>Tour() {
+  const currentStepIndex = ref(0);
+
+  const tourConfig = reactive<TourConfig>(
+    buildTourConfig(currentStepIndex.value)
+  );
+
+  // 用户通过面板实际改过的字段路径
+  const modifiedFields = new Set<string>();
+
+  // 静态步骤数据，页面不会改写。不要包 readonly()：DeepReadonly 会让
+  // currentStep 的返回类型（readonly string[] 等）与可变的 TourStep 接口不兼容
+  const steps = <TourName>TourSteps;
+  const currentStep = computed<TourStep>(() => {
+    const step = steps[currentStepIndex.value];
+    if (!step) {
+      throw new Error(`[use<TourName>Tour] step index 越界：${currentStepIndex.value}`);
+    }
+    return step;
+  });
+  const isFirst = computed(() => currentStepIndex.value === 0);
+  const isLast = computed(() => currentStepIndex.value === steps.length - 1);
+  const currentGuiFields = computed<GuiFieldDefinition[]>(() =>
+    getGuiFieldsForStep(currentStep.value.id)
+  );
+
+  function rebuildConfig() {
+    const defaults = buildTourConfig(currentStepIndex.value);
+    const current = tourConfig as unknown as Record<string, unknown>;
+    const next = defaults as unknown as Record<string, unknown>;
+    for (const key of Object.keys(next)) {
+      if (modifiedFields.has(key)) {
+        next[key] = current[key];
+      }
+    }
+    Object.assign(tourConfig, next);
+  }
+
+  function goToStep(index: number) {
+    if (index < 0 || index >= steps.length) return;
+    currentStepIndex.value = index;
+    rebuildConfig();
+  }
+
+  function next() {
+    goToStep(currentStepIndex.value + 1);
+  }
+
+  function prev() {
+    goToStep(currentStepIndex.value - 1);
+  }
+
+  function reset() {
+    modifiedFields.clear();
+    goToStep(0);
+  }
+
+  /**
+   * 按点号路径更新配置字段，并记录为用户修改（跨步骤保留）。
+   * 例如 `updateField("effect.tailRatio", 0.5)`。
+   */
+  function updateField(path: string, value: unknown) {
+    modifiedFields.add(path);
+    setPathValue(tourConfig, path, value);
+  }
+
+  return {
+    currentStepIndex: readonly(currentStepIndex),
+    tourConfig,
+    steps,
+    currentStep,
+    isFirst,
+    isLast,
+    currentGuiFields,
+    goToStep,
+    next,
+    prev,
+    reset,
+    updateField
+  };
+}
+
+function setPathValue(obj: TourConfig, path: string, value: unknown): void {
+  const keys = path.split(".");
+  let target: Record<string, unknown> = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!target[key] || typeof target[key] !== "object") {
+      target[key] = {};
+    }
+    target = target[key] as Record<string, unknown>;
+  }
+  target[keys[keys.length - 1]] = value;
+}

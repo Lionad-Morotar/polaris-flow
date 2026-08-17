@@ -1,0 +1,15 @@
+# flow-mem 知识库数据为本地积累，不入版本控制（知识随 --learn 持续增长且个人化，
+# 不随技能版本库分发；技能本体 SKILL.md、scripts/、learn.md/search.md 仍跟踪）
+skills/flow-mem/references/framework/
+
+# flow-mem 决策切片同理：用户偏好与决策含任务语境细节，本地积累不随技能版本库分发
+skills/flow-mem/references/decisions/
+
+# flow-web 站点 playbook 为本地积累，随使用持续增长且含内部系统操作细节，
+# 不随技能版本库分发；技能本体 SKILL.md、scripts/、configs/、evals/ 仍跟踪
+skills/flow-web/references/
+
+# flow-web 工作区绑定与 UUID 缓存为本机运行时状态（记录本机项目路径与工作区名），
+# 不随技能版本库分发；脚本首用时自建空缓存，本地文件保留不清理
+skills/flow-web/configs/workspace-bindings.json
+skills/flow-web/configs/workspace-uuids.json

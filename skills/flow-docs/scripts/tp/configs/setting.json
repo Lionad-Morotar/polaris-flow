@@ -1,0 +1,63 @@
+{
+  "targetLanguage": "中文",
+  "targetBranch": "upstream/main",
+  "taskTrackingFile": ".todo/tp-tasks.md",
+  "fileFilters": {
+    "ignoreGitignore": true,
+    "supportedExtensions": [
+      ".md",
+      ".py",
+      ".js",
+      ".ts",
+      ".tsx",
+      ".jsx",
+      ".java",
+      ".cpp",
+      ".c",
+      ".h",
+      ".hpp",
+      ".go",
+      ".rs",
+      ".kt",
+      ".swift",
+      ".rb",
+      ".php",
+      ".scala",
+      ".cs",
+      ".vue"
+    ],
+    "excludeFiles": [
+      "LICENSE",
+      "COPYRIGHT",
+      "COPYING",
+      "LICENSE.md",
+      "LICENSE.txt",
+      "CHANGELOG.md",
+      "CONTRIBUTING.md"
+    ],
+    "excludeDirs": [
+      "__pycache__",
+      ".git",
+      ".idea",
+      "node_modules",
+      "venv",
+      "env",
+      "dist",
+      "build",
+      "target",
+      ".vscode"
+    ]
+  },
+  "translation": {
+    "priority": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "CHANGELOG.md",
+      "docs/",
+      "src/",
+      "lib/",
+      "app/"
+    ],
+    "previewLines": 20
+  }
+}

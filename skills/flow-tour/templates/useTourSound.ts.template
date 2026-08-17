@@ -1,0 +1,113 @@
+import { ref } from "vue";
+
+/**
+ * 教学页音效引擎：全部音色由 Web Audio 实时合成，零音频资源。
+ *
+ * 设计意图：录屏展示时提供"可听的步骤反馈"，音色走克制路线——
+ * 短促、低音量、快速指数衰减，像阻尼良好的机械仪表而不是游戏 UI。
+ * 每个音色是一组振荡器参数（波形/频率/滑音/衰减），可在 SCORE 直接调参。
+ * AudioContext 受浏览器自动播放策略限制，延迟到首次用户手势后创建。
+ */
+
+interface VoiceSpec {
+  /** 波形：sine 最干净，triangle 带少量泛音更"脆" */
+  type: OscillatorType;
+  /** 起始频率 Hz */
+  freq: number;
+  /** 滑音目标频率 Hz（指数斜坡，向下滑音产生"落键"感） */
+  glide?: number;
+  /** 峰值电平 0-1（对单个 voice 而言，之后还会过总增益） */
+  gain: number;
+  /** 衰减时长 s（指数包络） */
+  decay: number;
+  /** 相对触发时刻的延迟 s，用于叠音 */
+  delay?: number;
+}
+
+type SoundName = "tick" | "toggle" | "reset" | "scrub";
+
+const SCORE: Record<SoundName, VoiceSpec[]> = {
+  // 步骤切换：相机半按快门式的轻"嗒"
+  tick: [{ type: "sine", freq: 1240, glide: 820, gain: 0.5, decay: 0.08 }],
+  // 布尔/开关：triangle 带一点木质脆感
+  toggle: [{ type: "triangle", freq: 620, glide: 420, gain: 0.4, decay: 0.09 }],
+  // 重置：低频"落锤"，两下叠出厚度
+  reset: [
+    { type: "sine", freq: 210, glide: 110, gain: 0.6, decay: 0.22 },
+    { type: "sine", freq: 420, glide: 220, gain: 0.15, decay: 0.12, delay: 0.02 }
+  ],
+  // 滑杆松手：极轻的水滴，避免拖动中聒噪只在 finish 触发
+  scrub: [{ type: "sine", freq: 980, glide: 760, gain: 0.18, decay: 0.05 }]
+};
+
+/** 总增益：所有 voice 的统一出口，宁可偏小 */
+const MASTER_GAIN = 0.5;
+const STORAGE_KEY = "<tour-name>-tour-sound";
+
+let ctx: AudioContext | null = null;
+let master: GainNode | null = null;
+
+function ensureContext(): boolean {
+  if (ctx) return true;
+  if (typeof window === "undefined") return false;
+  const AC = window.AudioContext;
+  if (!AC) return false;
+  ctx = new AC();
+  master = ctx.createGain();
+  master.gain.value = MASTER_GAIN;
+  master.connect(ctx.destination);
+  return true;
+}
+
+function playVoice(spec: VoiceSpec) {
+  if (!ctx || !master) return;
+  const t0 = ctx.currentTime + (spec.delay ?? 0);
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = spec.type;
+  osc.frequency.setValueAtTime(spec.freq, t0);
+  if (spec.glide) {
+    osc.frequency.exponentialRampToValueAtTime(spec.glide, t0 + spec.decay);
+  }
+  // 指数包络无法从 0 起跳，用 0.0001 做起点；attack 极短避免爆音
+  amp.gain.setValueAtTime(0.0001, t0);
+  amp.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.006);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.decay);
+  osc.connect(amp);
+  amp.connect(master);
+  osc.start(t0);
+  osc.stop(t0 + spec.decay + 0.05);
+}
+
+export function useTourSound() {
+  const enabled = ref(false);
+  if (typeof window !== "undefined") {
+    enabled.value = window.localStorage.getItem(STORAGE_KEY) !== "off";
+  }
+
+  function play(name: SoundName) {
+    if (!enabled.value) return;
+    if (!ensureContext()) return;
+    // 挂起状态（自动播放策略）下先 resume，失败的本次播放直接丢弃
+    if (ctx!.state === "suspended") {
+      void ctx!.resume();
+      return;
+    }
+    for (const voice of SCORE[name]) playVoice(voice);
+  }
+
+  function toggle() {
+    enabled.value = !enabled.value;
+    window.localStorage.setItem(STORAGE_KEY, enabled.value ? "on" : "off");
+    // 开启时立即给一次反馈，让用户确认声音通了
+    if (enabled.value) {
+      if (ensureContext() && ctx!.state === "suspended") {
+        void ctx!.resume().then(() => play("tick"));
+      } else {
+        play("tick");
+      }
+    }
+  }
+
+  return { enabled, play, toggle };
+}

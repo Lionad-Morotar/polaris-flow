@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+import { <tourName>TermGlossary } from "../../../app/config/tour/<tour-name>TermGlossary";
+import { <TourName>TourSteps } from "../../../app/config/tour/<tour-name>TourSteps";
+
+/**
+ * 名词释义（扫盲层）的教学质量守护，与 technique 词典守护互补：
+ * - 每个名词标签必须有条目可展开；词典不留孤儿条目。
+ * - 每步「名词释义 + 关键技术」标签总数 ≥ 8，保证侧栏信息密度，
+ *   也强制每一步既有"怎么做"（techniques）也有足够"是什么"（glossary）的铺垫。
+ */
+describe("<TourName> 名词释义词典", () => {
+  it("每个名词标签都有 glossary 详解", () => {
+    for (const step of <TourName>TourSteps) {
+      for (const term of step.glossary) {
+        expect(
+          <tourName>TermGlossary[term],
+          `名词「${term}」缺少释义（step: ${step.id}）`
+        ).toBeTruthy();
+      }
+    }
+  });
+
+  it("glossary 没有孤儿词条（词条必须被某步引用）", () => {
+    const used = new Set(<TourName>TourSteps.flatMap((s) => s.glossary));
+    for (const key of Object.keys(<tourName>TermGlossary)) {
+      expect(used.has(key), `名词「${key}」未被任何步骤引用`).toBe(true);
+    }
+  });
+
+  it("每步名词释义 + 关键技术标签总数 ≥ 8", () => {
+    for (const step of <TourName>TourSteps) {
+      const total = step.glossary.length + step.techniques.length;
+      expect(
+        total,
+        `step "${step.id}" 标签总数 ${total}（名词 ${step.glossary.length} + 技术 ${step.techniques.length}）不足 8`
+      ).toBeGreaterThanOrEqual(8);
+    }
+  });
+});

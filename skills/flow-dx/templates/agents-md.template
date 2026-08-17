@@ -1,0 +1,46 @@
+<!--
+  Agents.md 模板（flow-dx Agents.md 模式产物）。
+  目标路径：<repo-root>/Agents.md
+
+  用法：
+  1. {项目简介} 按项目实况填充（一两句话，说明项目是什么、做什么）
+  2. 「项目上下文」表格初始仅一行占位，按实际生成的文档用文件尾的可选表行片段补全
+  3. 仅添加真实存在的文档行，禁止虚空引用
+-->
+
+# Agents.md
+
+{项目简介}。
+
+* 现实层你有无限时间和资源，不要因上下文压缩简化任务执行
+
+## 项目上下文
+
+| 文档                | 说明          |
+| ------------------- | ------------- |
+| [<name>](<path>)    | <description> |
+
+你可以自行读取项目上下文文档，更新时也优先更新相关文档。
+
+<!--
+  ═══════════════ 可选表行片段（按实际生成的文档追加到上方表格）═══════════════
+
+  ▶ gsd-docs 片段（<repo-root>/.planning/codebase/*.md 存在时使用）：
+  挂载目标按盘点 gsdDocs.ignored 分支：ignored=false 粘到 CLAUDE.md（团队共享）；
+  ignored=true 粘到 CLAUDE.local.md（个人本地，避免同事 clone 后死链）。
+
+  | [STACK.md](./.planning/codebase/STACK.md)               | 技术栈、开发命令、部署流程 |
+  | [STRUCTURE.md](./.planning/codebase/STRUCTURE.md)       | 目录结构、命名规范         |
+  | [ARCHITECTURE.md](./.planning/codebase/ARCHITECTURE.md) | 架构模式、术语表           |
+  | [CONVENTIONS.md](./.planning/codebase/CONVENTIONS.md)   | 代码风格、开发约定         |
+  | [TESTING.md](./.planning/codebase/TESTING.md)           | 测试规范                   |
+  | [INTEGRATIONS.md](./.planning/codebase/INTEGRATIONS.md) | 外部服务、环境变量         |
+  | [CONCERNS.md](./.planning/codebase/CONCERNS.md)         | 技术债务、注意事项         |
+
+  ▶ 产品上下文片段（<repo-root>/PRODUCT.md 存在时使用）：
+
+  | [PRODUCT.md](./PRODUCT.md) | 产品定位、目标用户、品牌承诺与持久产品事实 |
+
+  要求：资源名从简——写 [STACK.md](./.planning/codebase/STACK.md)，
+  不要写成 [.planning/codebase/STACK.md](./.planning/codebase/STACK.md)。
+-->

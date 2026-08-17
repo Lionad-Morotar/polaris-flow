@@ -1,0 +1,10 @@
+{
+  "name": "flow-web-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node 辅助脚本，用于 flow-web 技能读取 Edge 内部数据",
+  "type": "module",
+  "dependencies": {
+    "classic-level": "^2.0.0"
+  }
+}

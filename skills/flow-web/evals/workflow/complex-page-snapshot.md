@@ -1,0 +1,824 @@
+- generic [ref=e{number}]:
+  - generic [ref=e{number}]:
+    - generic [ref=e{number}]:
+      - button [ref=e{number}] [cursor=pointer]:
+        - img [ref=e{number}]
+      - listitem [ref=e{number}]:
+        - img "Avatar" [ref=e{number}]
+      - generic [ref=e{number}]:
+        - generic [ref=e{number}]:
+          - strong [ref=e{number}]: simple_agent_loop
+          - button [ref=e{number}] [cursor=pointer]:
+            - img [ref=e{number}]
+          - button [ref=e{number}] [cursor=pointer]:
+            - img [ref=e{number}]
+        - 'generic "Tag: Saved at 03-23 23:31:58" [ref=e{number}]':
+          - generic [ref=e{number}]: Saved at 03-23 23:31:58
+    - generic [ref=e{number}]:
+      - button "Publish" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]: Publish
+      - button "download 导出" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]:
+          - img "download" [ref=e{number}]:
+            - img [ref=e{number}]
+          - generic [ref=e{number}]: 导出
+      - button "upload 导入" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]:
+          - img "upload" [ref=e{number}]:
+            - img [ref=e{number}]
+          - generic [ref=e{number}]: 导入
+      - button "copy_stroked" [ref=e{number}] [cursor=pointer]:
+        - img "copy_stroked" [ref=e{number}]:
+          - img [ref=e{number}]
+  - generic [ref=e{number}]:
+    - generic [ref=e{number}]:
+      - img [ref=e{number}]
+      - generic:
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Start
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: USER_INPUT
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: CONVERSATION_NAME
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: End
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: output
+            - generic [ref=e{number}]: Output type
+            - generic [ref=e{number}]: Return text
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: 工作流变量
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 用于通过设定循环次数和逻辑，重复执行一系列任务
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Intermediate variable
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_USER_INPUT
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_CONVERSATION_NAME
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_tool_result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_can_stop
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_loop_count
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_why_stop
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_todos
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: tool_result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: loop_count
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: why_stop
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+        - generic [ref=e{number}]:
+          - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Loop body
+            - img [ref=e{number}]:
+              - img [ref=e{number}]
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Tool Select
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 调用大语言模型,使用变量和提示词生成回复
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_USER_INPUT
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_tool_result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_todos
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_loop_count
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: tool
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reason
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: params
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reasoning_content
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: errorBody
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: isSuccess
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Model
+            - generic [ref=e{number}]:
+              - listitem [ref=e{number}]
+              - text: kimi-k2.5
+            - generic [ref=e{number}]: Skills
+            - generic [ref=e{number}]: Not configuredSkills
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Use Python
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 调用大语言模型,使用变量和提示词生成回复
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_USER_INPUT
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: code
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reasoning_content
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: errorBody
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: isSuccess
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Model
+            - generic [ref=e{number}]:
+              - listitem [ref=e{number}]
+              - text: kimi-k2.5
+            - generic [ref=e{number}]: Skills
+            - generic [ref=e{number}]: Not configuredSkills
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Set Result
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: 用于重置循环变量的值，使其下次循环使用重置后的值
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Reasoning
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 调用大语言模型,使用变量和提示词生成回复
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_USER_INPUT
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_tool_result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_loop_count
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_todos
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: pass
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reason
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reasoning_content
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: errorBody
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: isSuccess
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Model
+            - generic [ref=e{number}]:
+              - listitem [ref=e{number}]
+              - text: kimi-k2.5
+            - generic [ref=e{number}]: Skills
+            - generic [ref=e{number}]: Not configuredSkills
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Resoning Result Router
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: 连接多个下游分支，若设定的条件成立则仅运行对应的分支，若均不成立则只运行“否则”分支
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: LLM-
+                - text: pass
+              - img [ref=e{number}]
+              - 'generic "Tag: true" [ref=e{number}]':
+                - generic [ref=e{number}]: "true"
+            - generic [ref=e{number}]: Else
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Tool Python
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 编写代码，处理输入变量来生成返回值
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]: Not configuredInput
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: errorBody
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: isSuccess
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Jina Fetch
+            - generic [ref=e{number}]:
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: GET
+            - generic [ref=e{number}]:
+              - text: https://r.jina.ai/
+              - generic [ref=e{number}]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: Tool Select
+                - generic [ref=e{number}]: "-"
+                - generic [ref=e{number}]: params
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: body
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: statusCode
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: headers
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Toll Select Result Router
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: 连接多个下游分支，若设定的条件成立则仅运行对应的分支，若均不成立则只运行“否则”分支
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: LLM-
+                - text: tool
+              - img [ref=e{number}]
+              - 'generic "Tag: python" [ref=e{number}]':
+                - generic [ref=e{number}]: python
+            - generic [ref=e{number}]: Else if
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: LLM-
+                - text: tool
+              - img [ref=e{number}]
+              - 'generic "Tag: web_fetch" [ref=e{number}]':
+                - generic [ref=e{number}]: web_fetch
+            - generic [ref=e{number}]: Else if
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: LLM-
+                - text: tool
+              - img [ref=e{number}]
+              - 'generic "Tag: web_search" [ref=e{number}]':
+                - generic [ref=e{number}]: web_search
+            - generic [ref=e{number}]: Else
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Stop
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_can_stop
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Stop False
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_can_stop
+        - generic [ref=e{number}]:
+          - img "logo" [ref=e{number}]
+          - paragraph [ref=e{number}]: Break
+          - button [ref=e{number}] [cursor=pointer]:
+            - img [ref=e{number}]
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Count += 1
+            - generic [ref=e{number}]:
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: count
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: count
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Loop Count
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_loop_count
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Combine Why Stop
+            - generic [ref=e{number}]:
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: String1
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: String2
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: output
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Why Stop
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_why_stop
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: var_can_stop
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Condition_1
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: HTTP request-
+                - text: statusCode
+              - img [ref=e{number}]
+              - 'generic "Tag: 200" [ref=e{number}]':
+                - generic [ref=e{number}]: "200"
+            - generic [ref=e{number}]: Else
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set web_fetch Error
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Result 4
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Jina Web Search
+            - generic [ref=e{number}]:
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: GET
+            - generic [ref=e{number}]:
+              - text: https://r.jina.ai/http://www.bing.com/search?q=
+              - generic [ref=e{number}]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: Tool Select
+                - generic [ref=e{number}]: "-"
+                - generic [ref=e{number}]: params
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: body
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: statusCode
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: headers
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Condition_2
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: HTTP request-
+                - text: statusCode
+              - img [ref=e{number}]
+              - 'generic "Tag: 200" [ref=e{number}]':
+                - generic [ref=e{number}]: "200"
+            - generic [ref=e{number}]: Else
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Result 3
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set web_search Error
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Output Tool Select
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reason
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: tool
+            - generic [ref=e{number}]: Output content
+            - generic [ref=e{number}]: "接下来尝试使用「{{tool}}」，因为 {{reason}}"
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Output_1
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: output
+            - generic [ref=e{number}]: Output content
+            - generic [ref=e{number}]: "{{output}}"
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Variable
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: var_tool_result
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Set Variable_1
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Settings
+            - generic [ref=e{number}]: Not configuredSettings
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Condition_3
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]: LLM-
+              - text: tool
+            - generic [ref=e{number}]: Else
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: 入参清洗
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 编写代码，处理输入变量来生成返回值
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: user_input
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: conversation_name
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: user_input
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: conversation_name
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]:
+              - img "logo" [ref=e{number}]
+              - paragraph [ref=e{number}]: Return
+              - generic [ref=e{number}]:
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+                - button [ref=e{number}] [cursor=pointer]:
+                  - img [ref=e{number}]
+            - generic [ref=e{number}]: 调用大语言模型,使用变量和提示词生成回复
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: tool_result
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: user_input
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: loop_count
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: why_stop
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: content
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: reasoning_content
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: errorBody
+              - generic [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+                - generic [ref=e{number}]: isSuccess
+              - button [ref=e{number}] [cursor=pointer]:
+                - img [ref=e{number}]
+            - generic [ref=e{number}]: Model
+            - generic [ref=e{number}]:
+              - listitem [ref=e{number}]
+              - text: kimi-k2.5
+            - generic [ref=e{number}]: Skills
+            - generic [ref=e{number}]: Not configuredSkills
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: msg_before_final_output
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}]: Not configuredOutput
+            - generic [ref=e{number}]: Output content
+            - generic [ref=e{number}]: 接下来，把最终结果汇总一下。
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Condition
+            - button [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: If
+            - generic [ref=e{number}]:
+              - generic [ref=e{number}]:
+                - generic [ref=e{number}]: Loop-
+                - text: loop_count
+              - img [ref=e{number}]
+              - 'generic "Tag: 1" [ref=e{number}]':
+                - generic [ref=e{number}]: "1"
+            - generic [ref=e{number}]: Else
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+        - img [ref=e{number}]
+      - button "Variable (Debug)" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]: Variable (Debug)
+        - img [ref=e{number}]:
+          - img [ref=e{number}]
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic [ref=e{number}]:
+                  - generic [ref=e{number}]:
+                    - img [ref=e{number}]
+                    - img [ref=e{number}]
+                  - generic [ref=e{number}] [cursor=pointer]:
+                    - paragraph [ref=e{number}]: 33%
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button "Add node" [ref=e{number}] [cursor=pointer]:
+                    - generic [ref=e{number}]:
+                      - img [ref=e{number}]
+                      - generic [ref=e{number}]: Add node
+                - generic [ref=e{number}]:
+                  - button "Characters" [ref=e{number}] [cursor=pointer]:
+                    - generic [ref=e{number}]:
+                      - listitem [ref=e{number}]
+                      - strong [ref=e{number}]: Characters
+                  - button "Test run" [ref=e{number}] [cursor=pointer]:
+                    - generic [ref=e{number}]:
+                      - img [ref=e{number}]
+                      - generic [ref=e{number}]: Test run

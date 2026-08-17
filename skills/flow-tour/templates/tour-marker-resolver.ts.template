@@ -1,0 +1,234 @@
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+
+/**
+ * Tour marker 解析共享模块。
+ *
+ * 供各 tour 的 CLI resolver 导入使用，负责：
+ * - 递归扫描源码目录中的 `// flow-tour-marker: <id>` 注释
+ * - 校验 marker 是否缺失、是否重复
+ * - 生成 `assets/tour/<tour-name>-tour-markers.json`
+ * - 生成 `.vscode/tours/<taskname>.tour`
+ */
+
+export interface MarkerLocation {
+  file: string;
+  line: number;
+}
+
+export interface TourStepLike {
+  id: string;
+  title: string;
+  description: string;
+  codeLocations: string[];
+}
+
+export interface ResolveMarkersOptions {
+  /** 相对 repoRoot 的源码目录列表 */
+  sourceDirs: string[];
+  /** 项目根目录绝对路径 */
+  repoRoot: string;
+  /** Tour 步骤定义，用于自动推导 expectedMarkers */
+  steps: TourStepLike[];
+}
+
+export interface WriteCodeTourOptions {
+  /** CodeTour 标题 */
+  title: string;
+  /** marker 位置映射 */
+  markers: Record<string, MarkerLocation>;
+  /** Tour 步骤定义 */
+  steps: TourStepLike[];
+  /** 输出文件绝对路径 */
+  outputPath: string;
+}
+
+interface CodeTourStep {
+  file: string;
+  line: number;
+  description: string;
+}
+
+const DEFAULT_EXCLUDE_DIRS = new Set(["node_modules", "dist", "gen", ".nuxt", ".output"]);
+const DEFAULT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".cjs", ".mjs", ".vue", ".json", ".css", ".toml", ".rs"]);
+
+/**
+ * 根据文件扩展名返回对应的 marker 正则列表（一个文件可能混用多种注释语法）：
+ * - TOML 使用 `#`
+ * - JSON 使用 `"// ...": ""` 伪 key
+ * - CSS 使用 `/* ... *\/`
+ * - Vue SFC：script 里用 `//`，template 里用 `<!-- ... -->`
+ *   （template 的 attribute 内无法插注释，marker 统一放元素开始标签的上一行）
+ * - 其余使用 `//`
+ *
+ * marker id 字符集统一为 [\w-]（kebab/下划线均可）。不要对 HTML 注释分支
+ * 使用 [^\s-]+ 之类排除连字符的字符集——id 本身含连字符时会在首个 `-` 截断，
+ * 表现为"marker 明明插了却报未找到"。
+ */
+function getMarkerPatterns(ext: string): RegExp[] {
+  if (ext === ".toml") {
+    return [/#\s*flow-tour-marker:\s*([\w-]+)/g];
+  }
+  if (ext === ".json") {
+    return [/"\/\/\s*flow-tour-marker:\s*([\w-]+)"\s*:/g];
+  }
+  if (ext === ".css") {
+    return [/\/\*\s*flow-tour-marker:\s*([\w-]+)\s*\*\//g];
+  }
+  if (ext === ".vue") {
+    return [
+      /\/\/\s*flow-tour-marker:\s*([\w-]+)/g,
+      /<!--\s*flow-tour-marker:\s*([\w-]+)\s*-->/g
+    ];
+  }
+  return [/\/\/\s*flow-tour-marker:\s*([\w-]+)/g];
+}
+
+function validateSteps(steps: TourStepLike[]): void {
+  for (const step of steps) {
+    if (step.codeLocations.length !== 1) {
+      throw new Error(
+        `[tour-marker-resolver] step "${step.id}" 必须恰好对应一个 codeLocation，当前为 ${step.codeLocations.length} 个。` +
+          "如需多锚点请拆分为多个 step。"
+      );
+    }
+  }
+}
+
+export function findFiles(
+  root: string,
+  extensions: Set<string> = DEFAULT_EXTENSIONS,
+  excludeDirs: Set<string> = DEFAULT_EXCLUDE_DIRS
+): string[] {
+  const files: string[] = [];
+  const queue = [root];
+  while (queue.length) {
+    const dir = queue.shift()!;
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry);
+      const st = statSync(full);
+      if (st.isDirectory()) {
+        if (excludeDirs.has(entry)) continue;
+        queue.push(full);
+      } else if (st.isFile() && extensions.has(full.slice(full.lastIndexOf(".")))) {
+        files.push(full);
+      }
+    }
+  }
+  return files;
+}
+
+/**
+ * 扫描源码目录，返回 marker id 到文件/行号的映射。
+ */
+export function resolveMarkers(options: ResolveMarkersOptions): Record<string, MarkerLocation> {
+  validateSteps(options.steps);
+  const extensions = DEFAULT_EXTENSIONS;
+  const files = options.sourceDirs.flatMap((dir) =>
+    findFiles(resolve(options.repoRoot, dir), extensions)
+  );
+  const markers: Record<string, MarkerLocation> = {};
+
+  for (const file of files) {
+    const content = readFileSync(file, "utf-8");
+    const lines = content.split("\n");
+    const ext = file.slice(file.lastIndexOf("."));
+    const patterns = getMarkerPatterns(ext);
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      if (!line) continue;
+      for (const pattern of patterns) {
+        let match: RegExpExecArray | null;
+        pattern.lastIndex = 0;
+        while ((match = pattern.exec(line)) !== null) {
+          const id = match[1];
+          if (!id) continue;
+          if (markers[id]) {
+            throw new Error(
+              `[tour-marker-resolver] marker "${id}" 重复：已存在于 ${markers[id].file}:${markers[id].line}，又在 ${relative(options.repoRoot, file)}:${lineIndex + 1} 出现`
+            );
+          }
+          markers[id] = {
+            file: relative(options.repoRoot, file),
+            line: lineIndex + 1
+          };
+        }
+      }
+    }
+  }
+
+  const expectedMarkers = deriveExpectedMarkers(options.steps);
+  const missing = expectedMarkers.filter((id) => !markers[id]);
+  if (missing.length) {
+    throw new Error(`[tour-marker-resolver] 以下 marker 未找到：${missing.join(", ")}`);
+  }
+
+  return markers;
+}
+
+/**
+ * 从 TourSteps 自动推导所有 expected marker id。
+ */
+export function deriveExpectedMarkers(steps: TourStepLike[]): string[] {
+  const ids = new Set<string>();
+  for (const step of steps) {
+    for (const location of step.codeLocations) {
+      ids.add(location);
+    }
+  }
+  return [...ids];
+}
+
+function buildCodeTour(
+  markers: Record<string, MarkerLocation>,
+  steps: TourStepLike[]
+): CodeTourStep[] {
+  validateSteps(steps);
+  const tourSteps: CodeTourStep[] = [];
+  for (const step of steps) {
+    for (const location of step.codeLocations) {
+      const marker = markers[location];
+      if (!marker) continue;
+      tourSteps.push({
+        file: marker.file,
+        line: marker.line,
+        description: `**${step.title}**\n\n${step.description}`
+      });
+    }
+  }
+  return tourSteps;
+}
+
+/**
+ * 将 marker 映射写入 JSON 文件。
+ */
+export function writeMarkerJson(
+  markers: Record<string, MarkerLocation>,
+  outputPath: string
+): void {
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, JSON.stringify(markers, null, 2) + "\n", "utf-8");
+}
+
+/**
+ * 将 CodeTour 配置写入 .tour 文件。
+ */
+export function writeCodeTour(options: WriteCodeTourOptions): void {
+  const steps = buildCodeTour(options.markers, options.steps);
+  const tour = {
+    $schema: "https://aka.ms/codetour-schema",
+    title: options.title,
+    steps,
+    ref: "main"
+  };
+
+  mkdirSync(dirname(options.outputPath), { recursive: true });
+  writeFileSync(options.outputPath, JSON.stringify(tour, null, 2) + "\n", "utf-8");
+}

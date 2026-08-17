@@ -1,0 +1,40 @@
+/**
+ * 路径显示标签：默认只取文件名；同名冲突时向上逐级补目录段，
+ * 直到每个路径的尾部都互不冲突。
+ * 如 components/Foo.vue 与 pages/Foo.vue：
+ * 单名 Foo.vue 冲突 → 升级为 components/Foo.vue 与 pages/Foo.vue。
+ */
+export function shortestUniquePathLabels(paths: string[]): Map<string, string> {
+  const labels = new Map<string, string>();
+  const groups = new Map<string, string[]>();
+
+  for (const path of paths) {
+    const base = path.split("/").pop() ?? path;
+    const group = groups.get(base) ?? [];
+    group.push(path);
+    groups.set(base, group);
+  }
+
+  for (const [base, group] of groups) {
+    const first = group[0];
+    if (group.length === 1 && first) {
+      labels.set(first, base);
+      continue;
+    }
+    // 冲突：逐级向上补段，直到尾部全部唯一
+    let depth = 2;
+    for (; depth <= 8; depth++) {
+      const tails = group.map((p) => p.split("/").slice(-depth).join("/"));
+      if (new Set(tails).size === tails.length) {
+        group.forEach((p, i) => labels.set(p, tails[i] ?? p));
+        break;
+      }
+    }
+    // 防御：完全重复的路径退回全路径，避免死循环
+    if (depth > 8) {
+      group.forEach((p) => labels.set(p, p));
+    }
+  }
+
+  return labels;
+}

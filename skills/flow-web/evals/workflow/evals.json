@@ -1,0 +1,25 @@
+{
+  "skill_name": "flow-web",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "使用 Playwright 打开 http://127.0.0.1:5868 并截图查看页面状态",
+      "expected_output": "使用 Playwright 导航到指定地址并返回页面快照信息",
+      "files": [],
+      "assertions": [
+        {
+          "name": "正确使用Edge",
+          "description": "应使用 Edge 浏览器而不是 Chrome"
+        },
+        {
+          "name": "正确UserDataDir",
+          "description": "应使用 $HOME/.config/edge 作为 user data directory"
+        },
+        {
+          "name": "页面信息返回",
+          "description": "应返回页面标题、URL 和关键元素信息"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+import { describe, expect, it } from "vitest";
+import {
+  <TourName>TourSteps,
+  buildTourConfig,
+  STAGE_ORDERS,
+} from "../../../app/config/tour/<tour-name>TourSteps";
+// 可选：若项目导出了"完整成品配置"（如 default<Feature>Config），打开下方 import 与
+// "末步=默认"用例，路径按项目实际调整；无统一默认配置则保持注释，删除该用例即可。
+// import { default<TourName>Config } from "../../../app/three/types";
+
+/**
+ * 渐进展示守护：用派生式特征向量，绝不手工拼布尔数组。
+ *
+ * 手工拼的布尔数组在步骤扩容时会静默漏字段——守护写了却给假绿，比没写更危险，
+ * 因为它让后续每一次绿色对勾都在为错误目标背书（清单全对≠整体对）。
+ *
+ * 派生规则：
+ * - booleanSwitches：全部 boolean 字段用 Object.entries 按 typeof 程序化摘取，
+ *   新增 *Enabled / 教具开关自动入网，无需改本测试。
+ * - stageBooleans：字面量联合阶段字段按 STAGE_ORDERS 有序表展开成"已达 rank k"
+ *   序列；STAGE_ORDERS 留空对象时本段不贡献，对"无阶段字段"的 tour 透明。
+ *
+ * 另含三条结构性守护：act 篇章连续、id 非空唯一、description 长度上限——它们曾只活
+ * 在外置脚本或人眼里，致一次 act 误改被静默放过，故固化入网。
+ */
+function booleanSwitches(cfg: Record<string, unknown>): boolean[] {
+  return Object.entries(cfg)
+    .filter(([, value]) => typeof value === "boolean")
+    .map(([, value]) => value as boolean);
+}
+
+function stageBooleans(cfg: Record<string, unknown>): boolean[] {
+  const out: boolean[] = [];
+  for (const [field, order] of Object.entries(STAGE_ORDERS) as [
+    string,
+    readonly string[],
+  ][]) {
+    const rank = order.indexOf(cfg[field] as string);
+    for (let k = 1; k < order.length; k++) out.push(rank >= k);
+  }
+  return out;
+}
+
+function featureVector(cfg: Record<string, unknown>): boolean[] {
+  return [...booleanSwitches(cfg), ...stageBooleans(cfg)];
+}
+
+describe("<TourName> 渐进展示", () => {
+  it("可视元素严格递增：每步至少新增一个 true", () => {
+    for (let i = 1; i < <TourName>TourSteps.length; i++) {
+      const prev = featureVector(buildTourConfig(i - 1));
+      const curr = featureVector(buildTourConfig(i));
+      const hasNew = curr.some((value, index) => value && !prev[index]);
+      expect(
+        hasNew,
+        `step "${<TourName>TourSteps[i]?.id}" 没有新增可视元素`,
+      ).toBe(true);
+    }
+  });
+
+  // 可选用例：所有 patch 合并后等于生产默认配置。无统一默认配置时连同上方 import 一起删除。
+  // it("全部 patch 合并后等于生产默认配置", () => {
+  //   const finalConfig = buildTourConfig(<TourName>TourSteps.length - 1);
+  //   expect(finalConfig).toEqual(default<TourName>Config);
+  // });
+
+  it("篇章分组：同名 act 连续不被打断（否则目录分组错乱）", () => {
+    const acts = <TourName>TourSteps.map((s) => s.act);
+    for (let i = 1; i < acts.length; i++) {
+      if (acts[i] !== acts[i - 1]) {
+        expect(
+          acts.slice(0, i).includes(acts[i]),
+          `act "${acts[i]}" 在 step "${<TourName>TourSteps[i]?.id}" 被打断后重现`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("步骤 id 非空且唯一", () => {
+    // 若项目采用 sNN- 数字序号约定，可加强为：
+    // <TourName>TourSteps.forEach((s, i) =>
+    //   expect(s.id).toMatch(new RegExp(`^s${String(i).padStart(2, "0")}-`)));
+    const ids = <TourName>TourSteps.map((s) => s.id);
+    ids.forEach((id) => expect(id.length, "id 不得为空").toBeGreaterThan(0));
+    expect(new Set(ids).size, "id 必须唯一").toBe(ids.length);
+  });
+
+  it("每步 description 不超过 220 字符", () => {
+    for (const s of <TourName>TourSteps) {
+      expect(
+        s.description.length,
+        `step "${s.id}" description ${s.description.length} > 220`,
+      ).toBeLessThanOrEqual(220);
+    }
+  });
+});

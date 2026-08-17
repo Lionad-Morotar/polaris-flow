@@ -1,0 +1,41 @@
+/**
+ * Dev Hub 路由推导与标题生成工具。
+ *
+ * 抽成纯函数以便单元测试：内联在 index.vue 里的正则曾误吞 /dev 前缀，
+ * 导致卡片全部跳错路由；独立函数让推导逻辑可被直接断言，bug 无处遁形。
+ *
+ * 目标路径：app/pages/dev/hub.ts（与 index.vue 同目录，故 import './hub'）。
+ */
+
+/**
+ * import.meta.glob 的模块路径 → Nuxt 路由。
+ *
+ * 切分点选在 `/pages/` 边界、保留 `/dev` 作为路由段——这正是 Nuxt 文件系统
+ * 路由的语义（pages/dev/foo.vue 本就映射到 /dev/foo）。若切到 `/pages/dev`，
+ * 会把 /dev 路由段一并抹掉，卡片跳转到 /foo 而非 /dev/foo。
+ *
+ *   /pages/dev/foo-tour.vue   → /dev/foo-tour
+ *   /pages/dev/foo/index.vue  → /dev/foo
+ */
+export function routeOf(modulePath: string): string {
+  return modulePath
+    .replace(/^.*\/pages\//, "/")
+    .replace(/\.vue$/, "")
+    .replace(/\/index$/, "");
+}
+
+/**
+ * 路由 → 展示标题。
+ *
+ * 剥离 /dev 前缀后按 `-` 与 `/` 分段、首字母大写：
+ *   /dev/foo-tour   → Foo Tour
+ *   /dev/foo/sub    → Foo Sub
+ */
+export function titleOf(route: string): string {
+  return route
+    .replace(/^\/dev\/?/, "")
+    .split(/[-/]/)
+    .filter(Boolean)
+    .map((seg) => seg.charAt(0).toUpperCase() + seg.slice(1))
+    .join(" ");
+}

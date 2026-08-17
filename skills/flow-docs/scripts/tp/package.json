@@ -1,0 +1,15 @@
+{
+  "name": "flow-docs-tp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "flow-docs 翻译分支的项目翻译 CLI（tp），批量翻译项目文档和代码文件",
+  "bin": {
+    "tp": "./tp.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "franc": "^6.2.0"
+  }
+}

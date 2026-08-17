@@ -1,0 +1,111 @@
+<script setup lang="ts">
+/**
+ * Dev Hub 入口。
+ *
+ * 构建期收集所有 pages/dev/** 页面，渲染为可点击卡片列表。
+ * 新增 dev 页面无需修改本文件 —— glob 自动发现。
+ * 路由推导与标题生成抽到 ./hub，以便单元测试。
+ */
+import { routeOf, titleOf } from "./hub";
+
+// eager 收集 dev 页面模块；生产构建时本路由已被 pages:extend 整体移除，
+// 因此这些模块在生产产物中不会被打包
+const modules = import.meta.glob("~/pages/dev/**/*.vue");
+
+const devRoutes = Object.keys(modules)
+  .map(routeOf)
+  .filter((route) => route !== "/dev") // 排除自身 index
+  .sort();
+</script>
+
+<template>
+  <!-- Dev Hub：开发辅助页面动态入口 -->
+  <main class="dev-hub">
+    <header class="dev-hub-header">
+      <h1>Dev Hub</h1>
+      <p>本地开发辅助页面入口（仅开发环境可见）</p>
+    </header>
+
+    <nav v-if="devRoutes.length" class="dev-hub-grid">
+      <NuxtLink
+        v-for="route in devRoutes"
+        :key="route"
+        :to="route"
+        class="dev-hub-card"
+      >
+        <span class="dev-hub-card-title">{{ titleOf(route) }}</span>
+        <code class="dev-hub-card-path">{{ route }}</code>
+      </NuxtLink>
+    </nav>
+
+    <p v-else class="dev-hub-empty">暂无 dev 页面。在 pages/dev/ 下新增 .vue 即可自动出现。</p>
+  </main>
+</template>
+
+<style scoped>
+.dev-hub {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: var(--font-ui, system-ui, -apple-system, sans-serif);
+  color: var(--text-primary, #1a1a1a);
+}
+
+.dev-hub-header {
+  margin-bottom: 28px;
+}
+
+.dev-hub-header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dev-hub-header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+}
+
+.dev-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.dev-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border-1, #e4e6eb);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+
+.dev-hub-card:hover {
+  border-color: var(--accent, #4f8cff);
+  background: var(--accent-dim, #eef4ff);
+}
+
+.dev-hub-card-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dev-hub-card-path {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.dev-hub-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  border: 1px dashed var(--border-1, #e4e6eb);
+  border-radius: 10px;
+}
+</style>

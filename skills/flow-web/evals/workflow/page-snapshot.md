@@ -1,0 +1,92 @@
+- generic [ref=e{number}]:
+  - generic [ref=e{number}]:
+    - generic [ref=e{number}]:
+      - button [ref=e{number}] [cursor=pointer]:
+        - img [ref=e{number}]
+      - listitem [ref=e{number}]:
+        - img "Avatar" [ref=e{number}]
+      - generic [ref=e{number}]:
+        - generic [ref=e{number}]:
+          - strong [ref=e{number}]: test_cdp_connect
+          - button [ref=e{number}] [cursor=pointer]:
+            - img [ref=e{number}]
+          - button [ref=e{number}] [cursor=pointer]:
+            - img [ref=e{number}]
+        - 'generic "Tag: Saved at 03-23 23:58:13" [ref=e{number}]':
+          - generic [ref=e{number}]: Saved at 03-23 23:58:13
+    - generic [ref=e{number}]:
+      - button "Publish" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]: Publish
+      - button "download 导出" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]:
+          - img "download" [ref=e{number}]:
+            - img [ref=e{number}]
+          - generic [ref=e{number}]: 导出
+      - button "upload 导入" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]:
+          - img "upload" [ref=e{number}]:
+            - img [ref=e{number}]
+          - generic [ref=e{number}]: 导入
+      - button "copy_stroked" [ref=e{number}] [cursor=pointer]:
+        - img "copy_stroked" [ref=e{number}]:
+          - img [ref=e{number}]
+  - generic [ref=e{number}]:
+    - generic [ref=e{number}]:
+      - img [ref=e{number}]
+      - generic:
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: Start
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Input
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: input
+        - generic [ref=e{number}]:
+          - generic [ref=e{number}]:
+            - img "logo" [ref=e{number}]
+            - paragraph [ref=e{number}]: End
+          - generic [ref=e{number}]:
+            - generic [ref=e{number}]: Output
+            - generic [ref=e{number}] [cursor=pointer]:
+              - img [ref=e{number}]
+              - generic [ref=e{number}]: output
+            - generic [ref=e{number}]: Output type
+            - generic [ref=e{number}]: Return variables
+      - button "Variable (Debug)" [ref=e{number}] [cursor=pointer]:
+        - generic [ref=e{number}]: Variable (Debug)
+        - img [ref=e{number}]:
+          - img [ref=e{number}]
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic [ref=e{number}]:
+                  - generic [ref=e{number}]:
+                    - img [ref=e{number}]
+                    - img [ref=e{number}]
+                  - generic [ref=e{number}] [cursor=pointer]:
+                    - paragraph [ref=e{number}]: 100%
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button [ref=e{number}] [cursor=pointer]:
+                    - img [ref=e{number}]
+                  - button "Add node" [ref=e{number}] [cursor=pointer]:
+                    - generic [ref=e{number}]:
+                      - img [ref=e{number}]
+                      - generic [ref=e{number}]: Add node
+                - button "Test run" [ref=e{number}] [cursor=pointer]:
+                  - generic [ref=e{number}]:
+                    - img [ref=e{number}]
+                    - generic [ref=e{number}]: Test run
+        - generic [ref=e{number}] [cursor=pointer]:
+          - generic [ref=e{number}]:
+            - img [ref=e{number}]
+            - paragraph [ref=e{number}]: split_messages
+          - paragraph [ref=e{number}]: 示例：把较长的文本消息拆分多个，适合拟人发消息场景
