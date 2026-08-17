@@ -14,6 +14,10 @@ skills/flow-web/references/
 skills/flow-web/configs/workspace-bindings.json
 skills/flow-web/configs/workspace-uuids.json
 
+# flow-app 应用手册为本地积累（手册由用户主动编写沉淀，含本机应用操作细节），
+# 不随技能版本库分发；技能本体 SKILL.md 仍跟踪
+skills/flow-app/references/
+
 # flow-agent 技能本体随仓分发；configs/ 为本机启动器链配置（含账号级 zsh function 名），
 # 不随开源仓分发；launchers.example.json 为入库模板
 skills/flow-agent/configs/*
