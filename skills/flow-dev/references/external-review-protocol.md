@@ -30,10 +30,10 @@ Slice 轮 code-review 检查点（Step 6）**默认跳过**，满足任一触发
 
 `flow-dev` 不直接调用具体模型 CLI，而是通过 runner 主动发起外部审查。调用者先把任务描述（自己用什么模型做了什么）、被审查文件与审查要求写入 `prompt.md`，再以 `--prompt-file` 交给 runner；runner 据此选择正交模型（与 caller 异族）并执行审查，产物落到 `--review-dir` 下。
 
-示例（`external-review` 为 runner 的占位命令名，按实际实现替换）：
+示例（以 `flow-agent` 技能为 runner；runner 可替换为任意按本协议契约实现的技能或脚本）：
 
 ```bash
-external-review \
+python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py \
   --slug <task-slug>-ultrathoughts \
   --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts \
   --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md \

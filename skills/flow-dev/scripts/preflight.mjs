@@ -5,8 +5,8 @@
  * 把 SKILL.md 中冗长的依赖检查清单收敛成本脚本，避免主流程被细节淹没。
  * 失败时以非零退出码返回，并打印 JSON 汇总供调用方解析。
  *
- * 外部审查依赖 external-review runner 技能（按 external-review-protocol.md
- * 契约实现的自建技能或脚本）。启动器按族检查委托 runner 的 preflight（若提供）：
+ * 外部审查依赖 flow-agent runner 技能（正交审查调度器，见 flow-agent/SKILL.md，
+ * 按 external-review-protocol.md 契约实现）。启动器按族检查委托 runner 的 preflight（若提供）：
  * 降级链清单的真相源在 runner 侧，本脚本不再维护启动器清单——双份维护必然漂移。
  * runner 未提供 preflight 脚本时按族检查跳过（极简 runner 无降级链概念，不算错误）。
  */
@@ -45,22 +45,22 @@ function readSkillVersion(skillFile) {
   }
 }
 
-// flow-dev 强依赖的周边 skill（external-review 为外部审查 runner 的占位技能名）
+// flow-dev 强依赖的周边 skill（flow-agent 为外部审查 runner 技能）
 const REQUIRED_SKILLS = [
   "grill-me",
   "tdd",
   "flow-code-review",
-  "external-review",
+  "flow-agent",
 ];
 
 // 仅 --mode full 依赖的 skill：--mode light 跳过 to-prd，不生成 PRD
 const FULL_ONLY_SKILLS = ["to-prd"];
 
 // --mode dev 跳过 Step 1（UltraThoughts / 拆解）与 Step 2（grill-me / PRD），
-// 不需要 grill-me 和 to-prd，但仍需 tdd、code-review、external-review（code-review 检查点）
+// 不需要 grill-me 和 to-prd，但仍需 tdd、code-review、flow-agent（code-review 检查点）
 // --mode quick 保留 Step 1（UltraThoughts 是 flow-dev 自身能力、不依赖额外 skill）但跳过 Step 2（grill-me），
 // 依赖集与 dev 一致；依赖集跟「实际执行的 Step」走，而非落档行为
-const DEV_SKILLS = ["tdd", "flow-code-review", "external-review"];
+const DEV_SKILLS = ["tdd", "flow-code-review", "flow-agent"];
 
 // --mode fix 在 dev 基础上恒禁用 Step 6 外部正交审查，不再依赖 runner；
 // 保留 Step 5 本地 code-review 与 Step 3/7 的 tdd 流程
@@ -124,12 +124,12 @@ result.skill_versions["flow-dev"] = result.skill_version;
 // 2. 启动器按族检查：spawn runner preflight 并合并其结果。
 // runner 缺失时跳过（上面已报缺失，避免双重报错）；
 // runner 不提供 preflight 脚本时同样跳过（极简 runner 只需能执行审查）
-if (result.skills["external-review"]?.exists) {
+if (result.skills["flow-agent"]?.exists) {
   const runnerPreflight = path.join(
     HOME,
     ".claude",
     "skills",
-    "external-review",
+    "flow-agent",
     "scripts",
     "preflight.mjs",
   );
@@ -150,7 +150,7 @@ if (result.skills["external-review"]?.exists) {
       result.launcherFamilies = runnerResult.families ?? null;
       if (!runnerResult.ok) {
         for (const e of runnerResult.errors ?? []) {
-          fail(`external-review: ${e}`);
+          fail(`flow-agent: ${e}`);
         }
       }
     } catch {
