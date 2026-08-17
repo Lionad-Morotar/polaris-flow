@@ -67,6 +67,8 @@ npx skills add -g Lionad-Morotar/polaris-flow --all
 ## 注意
 
 - 本技能专为强长程能力和强指令遵循能力的模型设计，以减少对 Dynamic Graph 和 Teams 的依赖。在小体量的模型如 deepseek-v4-flash 可能无法获得预期效果。
+- 强依赖 mattpocock/skills 以及参考了部分 Claude Code 的系统提示。
+- 没有经过充分测试，但显然仍有相当大的优化空间。
 
 ## 维护
 
