@@ -19,6 +19,5 @@ skills/flow-web/configs/workspace-uuids.json
 skills/flow-agent/configs/*
 !skills/flow-agent/configs/launchers.example.json
 
-# 本机私有技能件（系统环境适配），含账号配置与内部环境细节，
-# 不随开源仓分发；本地保留可用，需要时可整目录从备份恢复
-skills/flow-os/
+# flow-os 技能本体随仓分发；configs/ 为本机 provider 账册（真实账号名册），不随开源仓分发
+skills/flow-os/configs/
