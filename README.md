@@ -16,6 +16,8 @@ npx skills add -g Lionad-Morotar/flow-skills --all
 
 ## 使用
 
+**技能成熟度：`flow-dev` 已成熟稳定；其余技能仍在打磨，其中 `flow-polaris`、`flow-ui-ralph`、`flow-mem` 仍处于试验期。**
+
 - `/flow-dev {你的要求}` — lionad 的代码开发流程
 - `/flow-image {描述或图片路径}` — 图像生成/编辑、图片转提示词、透明背景抠图
 - `/flow-distill {你的要求}` — lionad 的知识提炼与归档流程
