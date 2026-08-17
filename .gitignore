@@ -13,3 +13,8 @@ skills/flow-web/references/
 # 不随技能版本库分发；脚本首用时自建空缓存，本地文件保留不清理
 skills/flow-web/configs/workspace-bindings.json
 skills/flow-web/configs/workspace-uuids.json
+
+# 本机私有技能件（外部模型启动器与系统环境适配），含账号配置与内部环境细节，
+# 不随开源仓分发；本地保留可用，需要时可整目录从备份恢复
+skills/flow-agent/
+skills/flow-os/
