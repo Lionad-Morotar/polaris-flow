@@ -1,5 +1,5 @@
 ---
-name: polaris-loop
+name: flow-polaris
 description: 在 production-ready 项目上配置 cadence 自动驱动开发循环：从北极星目标分解 epic、调度 flow 技能产出功能 slice，合并累积，攒够 minor 后等用户验收发版
 argument-hint: "[--cadence 1h] [--now] [--resume] [--pause] [--new-direction] [--light]"
 metadata:
@@ -119,7 +119,7 @@ step 1 启动 cron 后回填 `cron_id` 与 `cron_created_at`。
 
 1. **启动 cron**（durable，绑项目路径）
    - [ ] `--cadence` 换算为 cron 表达式
-   - [ ] `CronCreate({ cron, durable: true, prompt: "/polaris-loop" })`，记录 `cron_id` 与 `cron_created_at`
+   - [ ] `CronCreate({ cron, durable: true, prompt: "/flow-polaris" })`，记录 `cron_id` 与 `cron_created_at`
    - [ ] cron 触发时靠 `project_path` 校验 cwd（防多项目/切目录误触发）
    - [ ] 提醒：recurring cron 7 天自动过期，临期（第 6 天）提醒续期
 
@@ -156,7 +156,7 @@ step 1 启动 cron 后回填 `cron_id` 与 `cron_created_at`。
    - [ ] 不够 → 不要操作，等待 Cron 调度自动从 step 2 循环开发
    - [ ] 够 → **合并前门控**；通过 → 顺序合并这批 epic 到 `test`（不存在则基于 main 创建；仅确认无重叠才章鱼）
    - [ ] `CronDelete(cron_id)` 暂停，置 phase=awaiting-e2e
-   - [ ] 通知用户：test 就绪，请 e2e，完成后 `release-project` 发版（含 test→main），发版后喊 `/polaris-loop --resume`
+   - [ ] 通知用户：test 就绪，请 e2e，完成后 `release-project` 发版（含 test→main），发版后喊 `/flow-polaris --resume`
 
 8. **用户 e2e 与发版**（人机切换，loop 暂停）
    - [ ] 用户在 `test` 端到端验证
@@ -164,7 +164,7 @@ step 1 启动 cron 后回填 `cron_id` 与 `cron_created_at`。
    - [ ] 此阶段 loop 不介入
 
 9. **恢复 loop**
-   - [ ] 用户喊 `/polaris-loop --resume`
+   - [ ] 用户喊 `/flow-polaris --resume`
    - [ ] **先 `CronDelete(state.cron_id)`**（防重复 cron），再重建
    - [ ] 读 state.json，`phase` = `paused_phase || idle`（精确恢复），清空已发布的 `pending_release`（awaiting-e2e 恢复时）
    - [ ] 回 step 1 重建 cron（兼作续期）

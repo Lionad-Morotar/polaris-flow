@@ -73,7 +73,7 @@ cat .planning/codebase/ARCHITECTURE.md .planning/codebase/CONCERNS.md .planning/
 
 ## 常驻冷却机制（设计背景）
 
-原 `update-gsd` 是常驻监听：启动时设 60±10 分钟定时器，每次 git commit / rebase / cherry-pick 重置定时器，到期后若 `$isOld` 才触发更新。flow-docs 作为**按需调用**的 skill，退化为「检查 → 过期则更新」的即时语义，不再维护常驻定时器。如需常驻场景，由调用方（如 polaris-loop 或 hook）周期性触发 flow-docs。
+原 `update-gsd` 是常驻监听：启动时设 60±10 分钟定时器，每次 git commit / rebase / cherry-pick 重置定时器，到期后若 `$isOld` 才触发更新。flow-docs 作为**按需调用**的 skill，退化为「检查 → 过期则更新」的即时语义，不再维护常驻定时器。如需常驻场景，由调用方（如 flow-polaris 或 hook）周期性触发 flow-docs。
 
 ## docs 索引完整性校验
 
