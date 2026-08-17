@@ -1,4 +1,4 @@
-# 本文件存在即声明 flow 是独立的 pnpm workspace 根：
-# 上层 ~/Github/Local 也有 pnpm-workspace.yaml，没有本文件时 pnpm 会向上吸附，
-# 把 lockfile 写到 flow 子模块之外，导致 lockfile 无法随子模块提交
+# 本文件存在即声明本仓是独立的 pnpm workspace 根：
+# 若上层目录恰有其他 pnpm-workspace.yaml，缺本文件时 pnpm 会向上吸附，
+# 把 lockfile 写到本仓之外，导致 lockfile 无法随仓提交
 packages: []

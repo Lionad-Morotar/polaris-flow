@@ -11,8 +11,8 @@ Workflow A 各阶段的细则依据。Step 1 通读一遍，Step 2–3 起草时
 
 ## 归属决策树
 
-- 工作流族技能（多阶段流程、状态机、preflight + workflow 范式）：`~/Github/Local/local-link/skills/flow/skills/<name>/`（flow 子模块）；符号链接 + 登记 flow/README.md
-- 独立领域技能（可单独复用、需独立 git 管理）：`~/Github/Local/local-link/skills/<name>/`；符号链接；按需建 git 仓库
+- 工作流族技能（多阶段流程、状态机、preflight + workflow 范式）：本仓 `skills/<name>/`；符号链接到 `~/.claude/skills/<name>` + 登记本仓 README.md
+- 独立领域技能（可单独复用、需独立 git 管理）：单独建仓 `<repo>/skills/<name>/`；符号链接；独立 git 管理
 - 轻量个人技能（快速迭代、不进 git）：`~/.claude/skills/<name>/`；直接落位
 
 命名：flow 家族统一 `flow-<domain>`；其他技能用 kebab-case。目录名即技能名，即 frontmatter 的 name。
