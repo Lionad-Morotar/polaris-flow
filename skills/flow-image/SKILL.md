@@ -12,7 +12,7 @@ metadata:
 * 严格按照流程执行，如果碰到以下阻塞按清单解决:
   * 进入了计划模式，生成了计划:你应当自动确认计划（注意，并非不做计划!而是先计划再自动确认）。
   * 有决策需要我确认:仅三类必须询问——**跨家族模型切换**、**复杂主体的透明背景**、**provider/model 解析报错（UNKNOWN_MODEL / UNSUPPORTED_COMBO）**;其余按"高质量图像产出"标准自行决策。
-  * **不要暂停**:完成所有阶段，而不是分阶段汇报向我确认，get all shits done。
+  * **不要暂停**:完成所有阶段，而不是分阶段汇报向我确认，get all shits done。例外:抽卡迭代每轮出图后暂停等评审是预期行为（见 `references/draft-iteration.md`）。
 * **按需读取 references**:仅在进入对应模式或需要提示词增强时读取，禁止初始化时一口气全读（详见文末 References 地图）。
 * **provider/model 解析一律走脚本**:`scripts/resolve_provider.mjs` 是 n×n 路由的单一事实源，禁止在脑中按散文推断路由（详见 Step 1.5 与 `references/providers.md`）。
 
@@ -24,6 +24,7 @@ metadata:
 - anti-render：`--mode anti-render` 或触发词("anti-render"/"理想vs现实"/"对比图"/"渲染vs真实",命中等同隐式 `--mode anti-render`)；状态判定 → 领域识别 → 五维对比映射 → 构建提示词 → 落回 edit/带参考 gen；`references/anti-render.md` 必读
 - transparent：`--mode transparent`；解析 provider/model → 色键背景生成 → 本地移除 → Alpha 验证；`references/transparent.md`
 - batch：`--mode batch`；每资产独立 resolve + 独立调用,**禁止用 `n` 参数替代独立提示词**；同 gen
+- draft(抽卡)：触发词("抽卡"/"出几张看看"/"来几版"/"给我选")命中即进入,不占 `--mode`；每轮默认 2 张、每张独立调用，出图后暂停等评审；`references/draft-iteration.md` 必读
 
 旧参数已移除并合并为 `--mode`:`--prompt` → `--mode prompt`、`--edit` → `--mode edit`、`--anti-render` → `--mode anti-render`、`--transparent` → `--mode transparent`、`--batch` → `--mode batch`;传入旧参数时报错并提示新写法。
 
@@ -128,6 +129,7 @@ metadata:
 
 - `references/providers.md`：provider×model 路由规则、族→推荐映射、合法集、bl/grsapi 参数与落盘差异、resolve 输出 schema；需理解/排障路由时;模型上下线同步时
 - `references/prompting.md`：提示词原则:结构、具体性策略、增强边界、文字渲染、参考图、迭代、不变量；提示词笼统需增强时;edit 模式
+- `references/draft-iteration.md`：抽卡迭代工作流:每轮默认 2 张独立调用、变体命名、多参考图角色标注、约束累积块、定稿改比例以选定稿重抽；抽卡触发词命中时必读
 - `references/sample-prompts.md`：按用例分类(产品样机/UI 样机/信息图/广告等)的完整提示词配方；需要参考完整配方时
 - `references/analysis-framework.md`：三层视觉分析框架(核心视觉/风格技法/认知叙事)+ 风格定义、镜头参数、负面提示词、权重、画幅技巧；prompt 模式必读
 - `references/model-formats.md`：Banana/Qwen-Image/Midjourney/SD/FLUX/DALL-E 格式适配 + model→格式自动选择映射；prompt 模式必读;按 model 选格式时
