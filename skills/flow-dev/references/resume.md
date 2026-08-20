@@ -22,6 +22,7 @@
    - 最后活动：`updated_at`；缺失时依次回退 `start_time`、`state.json` 的文件 mtime
    - 技能版本：`skill_versions["flow-dev"]`；缺失（0.1.0 之前的旧 run）时跳过版本漂移判定
    - `flags.worktree` 为 true 的标注 `worktree`，提示续跑前需按故障恢复章节重建 worktree
+   - `flags.delegate` 为 true 的标注 `delegate`，提示未完成 Slice 续跑时按委托契约重新分派子代理
 
 4. **排序**：当前 cwd 所在 repo（`git rev-parse --show-toplevel` 与 `repo_root` 相等）的 run 置顶，其余按最后活动时间倒序
 
@@ -100,6 +101,8 @@ run 生成时的 flow-dev 版本与当前技能版本可能不同——技能在
 - `phase` 为 `blocked` / `merge-conflict`：项目内置顶展示，附带最近一条 blocker 描述
 - `slices` 为空或全 `pending`：进度显示 `0/0`，当前 slice 显示 `—`
 - `skill_versions` 缺失：0.1.0 之前的旧 run，跳过版本漂移判定，其余照常
+- `flags.delegate` 缺失：按 `false` 恢复（内联模式），旧 run 无此字段不视为错误
+- `flags.delegate` 为 true 且当前 Slice 处于 `developing` / `reviewing` / `fixing`：子代理不参与续跑，按 `references/delegation.md`「中断与续跑」重新分派对应子代理（重派前先盘点工作区残留）
 - `flags.mode` 缺失：0.1.x 旧 run（flags 仅有 `full` 布尔）：preflight mode 按 `flags.full === true` → `full`、否则 `light` 恢复；原 `--dev` run 无法从 flags 识别，由版本漂移判定承接（含 skill_versions 打标的旧 run 升至 v0.2.0 时必触发；v0.2.0 CHANGELOG 记录本 schema 变更，供漂移流程判读）
 - `skill_versions["flow-dev"]` ≠ 当前版本：备注标注 `⬆ 版本漂移`，选定后按「版本漂移判定」深入一层
 - 全部 run 均为 `done`：输出"没有未完成的 flow-dev 任务"并停止

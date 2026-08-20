@@ -21,6 +21,7 @@
 
 * `high` / `xhigh` 档暂不在 flow-dev 自动流程启用（性价比不划算）；需要更深审查时，人工直接跑 `flow-code-review --effort high|xhigh`
 * 该映射只作用于本地 code-review；Step 6 外部正交审查（runner）的 effort 与之解耦，锁定为 `normal`
+* `--delegate` 只改变本地 code-review 的执行者（分派审查子代理），不改变本 effort 映射
 
 ## 修复循环上限
 

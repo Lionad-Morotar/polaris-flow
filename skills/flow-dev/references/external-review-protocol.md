@@ -14,7 +14,8 @@
 执行策略：
 - **`--mode light`（默认）**：执行 code-review 检查点；若 `--dissection` 开启，追加需求树拆解检查点；
 - **`--mode full`**：追加 UltraThoughts、grill-me 两个检查点（需求树拆解检查点仍由 `--dissection` 触发，与模式无关）；
-- **`--skip-review`**：跳过全部检查点。
+- **`--skip-review`**：跳过全部检查点；
+- **`--delegate`**：与委托正交——外部审查仍由主代理发起（后台 Bash / 同步调用），不委托子代理（委托边界见 `references/delegation.md` 分工总表），检查点集与触发判据沿用伴行模式。
 
 Slice 轮 code-review 检查点（Step 6）**默认跳过**，满足任一触发判据才执行：
 
