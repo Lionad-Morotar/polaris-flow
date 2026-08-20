@@ -71,6 +71,10 @@
         "interactive": { "type": "boolean" },
         "dry_run": { "type": "boolean" },
         "stage": { "type": "boolean" },
+        "delegate": {
+          "type": "boolean",
+          "description": "--delegate 执行策略开关，与 mode 正交；缺失视为 false（旧 run 兼容）"
+        },
         "stop": {
           "type": ["string", "null"],
           "enum": ["dissection", "thinking", "prd", "devgoal", "slice", null]
@@ -92,6 +96,10 @@
             "enum": ["pending", "developing", "reviewing", "fixing", "done", "blocked"]
           },
           "bugs_path": { "type": ["string", "null"] },
+          "base_ref": {
+            "type": ["string", "null"],
+            "description": "--delegate 时主代理分派开发子代理前记录的 Slice 起点 ref（git rev-parse HEAD），供审查子代理 --base 与 resume 后恢复 diff 基线；内联模式恒为 null 或缺省"
+          },
           "commits": {
             "type": "array",
             "description": "auto-commit 模式下本 Slice 已执行的提交（开发中子任务提交 + Step 7 收尾提交），按执行顺序排列；--stage 模式恒为空数组或缺省",
