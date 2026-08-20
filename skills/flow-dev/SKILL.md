@@ -3,7 +3,7 @@ name: flow-dev
 description: 开发流程，将零散的需求任务重新组织成拆解、TDD Dev、Review、验证到维护记忆、更新文档的一整条的成熟工业流程。
 argument-hint: <task description> [--mode light|full|quick|dev|fix] [--depth mvp|prod|hifi] [--dissection] [--worktree] [--skip-review] [--interactive] [--dry-run] [--stage] [--delegate] [--stop dissection|thinking|prd|devgoal|slice] [--resume [task-slug]]
 metadata:
-  version: 0.1.0-alpha.0
+  version: 0.2.0
 ---
 ## 要求
 
