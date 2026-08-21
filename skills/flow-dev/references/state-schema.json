@@ -98,7 +98,7 @@
           "bugs_path": { "type": ["string", "null"] },
           "base_ref": {
             "type": ["string", "null"],
-            "description": "--delegate 时主代理分派开发子代理前记录的 Slice 起点 ref（git rev-parse HEAD），供审查子代理 --base 与 resume 后恢复 diff 基线；内联模式恒为 null 或缺省"
+            "description": "开发开始前记录的 Slice 起点 ref（git rev-parse HEAD），供 DevLoop 审查框定本 Slice 的 diff 范围（外部执行写入 prompt 陈述、本地执行以 --base 传入）与 resume 后跨 Slice 续跑恢复 diff 基线；0.2.1 起恒记录，旧 run 仅 --delegate 记录，缺失时容忍"
           },
           "commits": {
             "type": "array",

@@ -3,7 +3,7 @@ name: flow-code-review
 description: 代码审查流程：按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep），默认零子代理
 argument-hint: "[target] [--effort low|medium|high|xhigh] [--base <ref>] [--json]"
 metadata:
-  version: 0.1.0-alpha.0
+  version: 0.1.0-alpha.1
 ---
 
 ## 要求
@@ -81,5 +81,5 @@ metadata:
 
 ## 与其他技能的关系
 
-* `flow-dev` Step 5 以 `--json --effort <映射档位>` 调用本技能；外部正交审查在 Step 6 另行编排，本技能不集成
+* flow-dev 的 DevLoop 审查默认由外部异族模型执行本技能的流程（runner 以 `--no-preamble` 调起，prompt 陈述本技能路径、调用语义等价 `--json --effort <档位> --base <Slice 基 ref>`、输出 findings JSON）；`--mode fix`/`--skip-review`/外部执行运行时失败降级为本地调用（同一调用语义）。外部模型工具集为 Read/Grep/Glob/Bash，仅 `low`/`medium` 零子代理档兼容（flow-dev 自动流程本就只用这两档；外部模型无 Agent 工具，也不存在工作区写权限）
 * cleanup 类发现（reuse/simplification/efficiency/altitude）的应用修复归 `/simplify`；correctness 修复归 flow-dev 的 tdd 循环

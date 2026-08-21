@@ -8,7 +8,7 @@
 |---|---|---|
 | Step 0-3（初始化、UltraThoughts、grill-me、DevGoal） | 全部执行 | 不参与 |
 | Step 4 Slice 开发 | flow-mem 预搜索、记录 Slice 基 ref、分派、验收、写 state | 开发、测试、提交 |
-| Step 5 本地 code-review | 外部审查后台发起（仍走 Bash）；分派审查子代理 | 执行 flow-code-review |
+| Step 5 DevLoop 审查 | 外部执行后台发起（仍走 Bash）；仅降级本地执行（`--mode fix`/`--skip-review`/外部执行运行时失败）时分派审查子代理 | 执行 flow-code-review（降级本地执行时） |
 | Step 6 外部正交审查 | 收集与合并（不委托，行为与内联模式一致） | 不参与 |
 | Step 7 修复 | 分派、验收、`fix_round` 治理与 blocker 裁决 | 修复 Bugs、复跑测试、提交 |
 | Step 8-9（最终报告、flow-mem 沉淀、worktree 收尾） | 全部执行 | 不参与 |
@@ -55,6 +55,8 @@ RESIDUAL: none | 逐条列出未解决问题
 ```
 
 ### 审查子代理
+
+DevLoop 审查默认外部执行（主代理发起，不经子代理）；本模板仅用于降级本地执行的场景。
 
 ```
 你是 flow-dev 委托模式下的审查子代理。读取 ~/.claude/skills/flow-code-review/SKILL.md

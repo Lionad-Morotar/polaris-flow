@@ -3,7 +3,7 @@ name: flow-dev
 description: 开发流程，将零散的需求任务重新组织成拆解、TDD Dev、Review、验证到维护记忆、更新文档的一整条的成熟工业流程。
 argument-hint: <task description> [--mode light|full|quick|dev|fix] [--depth mvp|prod|hifi] [--dissection] [--worktree] [--skip-review] [--interactive] [--dry-run] [--stage] [--delegate] [--stop dissection|thinking|prd|devgoal|slice] [--resume [task-slug]]
 metadata:
-  version: 0.2.0
+  version: 0.2.1
 ---
 ## 要求
 
@@ -21,9 +21,9 @@ metadata:
 
 - grill-me / tdd — skill（SKILL.md）：读 `~/.claude/skills/<name>/SKILL.md` 后按流程执行
 - to-prd — skill（SKILL.md）：仅 `--mode full` 使用：读 `~/.claude/skills/to-prd/SKILL.md` 后按流程执行
-- flow-code-review — skill（`~/.claude/skills/flow-code-review/SKILL.md`）：以 `--json --effort <档位>` 调用；详见 Step 5
+- flow-code-review — skill（`~/.claude/skills/flow-code-review/SKILL.md`）：DevLoop 审查流程（多角度 finder → 去重/验证 → findings JSON 契约）。默认由外部异族模型执行（Step 5 顶部后台发起，prompt 陈述本技能路径、effort 档位、`--base <base_ref>` 与 findings JSON 输出契约，Step 6 收集解析）；`--mode fix`、`--skip-review` 或外部执行运行时失败降级为本地以 `--json --effort <档位> --base <base_ref>` 调用；详见 Step 5 / 6
 - flow-mem — skill（`~/.claude/skills/flow-mem/SKILL.md`）+ 脚本（`scripts/search.mjs`）：Step 0 `--worktree` 创建 worktree 前检索 git/worktree 环境坑点（--mode h4，只读）；Step 3 DevGoal 前概览现有框架（--mode frameworks，只读）并按任务类型检索 decisions 库既往用户决策（--kb decisions --mode h4，只读）；Step 4 每个 Slice 开发前按 Slice 预搜索坑点（--mode h4，只读）；Step 9 收尾沉淀本次运行产物（--learn，框架坑点归 framework 切片、用户表态过的偏好与决策归 decisions 切片）；未安装时相应步骤跳过并记入决策台账
-- flow-agent — skill（`~/.claude/skills/flow-agent/SKILL.md`）+ 脚本（`scripts/run-external-review.py`）：外部审查 runner，按 `references/external-review-protocol.md` 契约调起与 caller 异族的外部模型执行正交审查；在 UltraThoughts、grill-me、code-review 检查点调用，详见 Step 1 / 2 / 6；code-review 检查点触发时在 Step 5 顶部以后台并行方式发起（Bash `run_in_background`）、Step 6 收集结果，其余检查点同步调用；runner 负责选择并启动外部模型进程（可替换为任意按 protocol 契约实现的技能或脚本，最小实现只需一个能接收 prompt、产出 `review-<model>.md` 并按协议返回 JSON 的脚本）
+- flow-agent — skill（`~/.claude/skills/flow-agent/SKILL.md`）+ 脚本（`scripts/run-external-review.py`）：外部审查 runner，按 `references/external-review-protocol.md` 契约调起与 caller 异族的外部模型执行正交审查；在 UltraThoughts、grill-me、code-review（DevLoop 审查）检查点调用，详见 Step 1 / 2 / 5；code-review 检查点在 Step 5 顶部以后台并行方式发起（Bash `run_in_background`，附 `--no-preamble` 跳过 light 前言——前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程冲突）、Step 6 收集结果，其余检查点同步调用；runner 负责选择并启动外部模型进程（可替换为任意按 protocol 契约实现的技能或脚本，最小实现只需一个能接收 prompt、产出 `review-<model>.md` 并按协议返回 JSON 的脚本）
 - Agent 工具 — 运行时能力：仅 `--delegate` 使用，分派开发 / 审查 / 修复子代理，分派与返回契约见 `references/delegation.md`
 
 ## 参数与变量
@@ -35,7 +35,7 @@ metadata:
 模式与质量：
 
 - `<task description>`（必填）：任务描述，用于生成 `<task-slug>`
-- `--mode <mode>`（默认 `light`）：流程模式四档。`light`（精简）：跳过 `to-prd` 不生成 PRD，外部审查只保留 code-review 检查点（默认跳过、较大改动才触发，见 Step 6），UltraThoughts / 决策台账 / DevGoal / Bugs 终端输出不落档；`full`（完整）：追加 UltraThoughts、grill-me 两个外部审查检查点（code-review 检查点各模式均启用、默认跳过仅较大改动触发，见 Step 6；需求树拆解检查点由 `--dissection` 触发，与模式无关且恒执行），本地 code-review effort 升为 `medium`（默认 `low`），执行 `to-prd` 生成并落档 PRD，且 UltraThoughts、决策台账、DevGoal、Bugs 也落档；`quick`（轻量直进）：保留 Step 1 UltraThoughts（终端输出不落档，同 light）但跳过 Step 2（grill-me / to-prd / 决策台账），DevGoal 直接从 UltraThoughts 推导（不经决策台账），适用于需求清楚但决策点寥寥、不值得走完整 grill-me 自答协议的场景；不生成 decisions.md（high-risk pending decision 由 UltraThoughts 目标定义性属性承载、最终报告显式列出）；本地 code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|prd` 互斥（`--stop thinking`/`devgoal`/`slice` 可用）；`dev`（开发直进）：跳过 Step 1（UltraThoughts / 需求树拆解）与 Step 2（grill-me / PRD），从会话上下文直接推导 DevGoal 并进入 TDD 开发循环，适用于上下文已充分讨论或已有文档产出的场景，本地 code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|thinking|prd` 互斥；`fix`（修复直进）：链路在 dev 基础上再收敛——DevGoal 直接从任务描述或会话上下文推导（flow-mem 框架概览 / decisions 检索与 tdd 技能读取保留），适用于已有 plan 或需求、知道怎么做的简单修复；Step 6 外部正交审查恒禁用（reviews[] 记 skipped、不过 `review` phase）；Step 8 跳过最终报告落档，终端输出一行式小结（high-risk pending decision 在小结中列出）；默认 `--depth mvp`（显式 `prod` 可用）；本地 code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|thinking|prd`、`--depth hifi` 互斥（hifi 质量门含外部审查通过，与恒禁用冲突，需 hifi 时改用 `--mode dev`）。旧参数已移除：`--full` → `--mode full`，`--dev` → `--mode dev`，传入旧参数时报错并提示新写法
+- `--mode <mode>`（默认 `light`）：流程模式四档。`light`（精简）：跳过 `to-prd` 不生成 PRD，外部审查只保留 DevLoop 审查的 code-review 检查点（外部执行 flow-code-review 流程，每 Slice 恒执行一次，运行时失败自动降级本地执行，见 Step 5 / 6），UltraThoughts / 决策台账 / DevGoal / Bugs 终端输出不落档；`full`（完整）：追加 UltraThoughts、grill-me 两个外部审查检查点（code-review 检查点各模式均每 Slice 恒执行，见 Step 5 / 6；需求树拆解检查点由 `--dissection` 触发，与模式无关且恒执行），code-review effort 升为 `medium`（默认 `low`），执行 `to-prd` 生成并落档 PRD，且 UltraThoughts、决策台账、DevGoal、Bugs 也落档；`quick`（轻量直进）：保留 Step 1 UltraThoughts（终端输出不落档，同 light）但跳过 Step 2（grill-me / to-prd / 决策台账），DevGoal 直接从 UltraThoughts 推导（不经决策台账），适用于需求清楚但决策点寥寥、不值得走完整 grill-me 自答协议的场景；不生成 decisions.md（high-risk pending decision 由 UltraThoughts 目标定义性属性承载、最终报告显式列出）；code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|prd` 互斥（`--stop thinking`/`devgoal`/`slice` 可用）；`dev`（开发直进）：跳过 Step 1（UltraThoughts / 需求树拆解）与 Step 2（grill-me / PRD），从会话上下文直接推导 DevGoal 并进入 TDD 开发循环，适用于上下文已充分讨论或已有文档产出的场景，code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|thinking|prd` 互斥；`fix`（修复直进）：链路在 dev 基础上再收敛——DevGoal 直接从任务描述或会话上下文推导（flow-mem 框架概览 / decisions 检索与 tdd 技能读取保留），适用于已有 plan 或需求、知道怎么做的简单修复；DevLoop 审查恒本地执行（外部执行恒禁用，reviews[] 外部检查点记 skipped、不过 `review` phase）；Step 8 跳过最终报告落档，终端输出一行式小结（high-risk pending decision 在小结中列出）；默认 `--depth mvp`（显式 `prod` 可用）；code-review effort 维持 `low`——与 `--dissection`、`--stop dissection|thinking|prd`、`--depth hifi` 互斥（hifi 质量门含 DevLoop 审查外部执行通过，与 fix 恒本地执行冲突，需 hifi 时改用 `--mode dev`）。旧参数已移除：`--full` → `--mode full`，`--dev` → `--mode dev`，传入旧参数时报错并提示新写法
 - `--depth`（默认 `prod`；`--mode fix` 时默认 `mvp`）：`mvp` / `prod` / `hifi`，决定 DevGoal 质量门、review effort、修复轮数上限；`hifi` 与 `--mode fix` 互斥（hifi 质量门含外部审查通过，与 fix 恒禁用外部审查冲突）
 - `--dissection`（默认 关闭）：打开后 Step 1 执行需求树拆解（拆解纪律见 `references/dissection.md`），产物落档到独立的 `docs/dissections/<task-slug>.md`（不并入 UltraThoughts 文档，也不影响 UltraThoughts 的落档规则）
 
@@ -54,7 +54,7 @@ metadata:
 - `--interactive`（默认 关闭）：打开后 grill-me 等步骤可向我提问（默认自答）
 - `--dry-run`（默认 关闭）：只打印执行计划，不动手
 - `--stage`（默认 关闭）：提交策略开关。关闭时为 auto-commit：提交发生在每个 Slice 的 DevLoop 内（Slice 内子任务节点可提交、Step 7 修复收敛后提交收口，见 Step 4 / Step 7）；打开后 Loop 中不执行任何提交，改动逐 Slice 累积，每个 Slice 收尾仅记录提交计划（建议 message + 文件清单），Step 8 落档最终报告、Step 9 输出手动提交指引（计划回顾 + 执行顺序）由我按计划自行执行。与 `--worktree` 组合时 `--stage` 强制 keep 收尾（无已提交改动可合并回原分支）
-- `--delegate`（默认 关闭）：执行策略开关，与 `--mode` 正交（任意模式可叠加，流程深度、落档规则、外部审查检查点集全部沿用伴行模式）。打开后主代理收敛为编排者：规划（Step 0-3）、分派与验收、外部审查发起、状态维护、最终报告与知识沉淀留在主代理；Slice 开发、本地 code-review、Bugs 修复等实质执行按 `references/delegation.md` 分派子代理。连带强化两条纪律：DevGoal 每个 Slice 的验收标准必须是可执行命令；验收一律实际执行不信任子代理报告，验收失败的修复重新分派而非主代理自己动手
+- `--delegate`（默认 关闭）：执行策略开关，与 `--mode` 正交（任意模式可叠加，流程深度、落档规则、外部审查检查点集全部沿用伴行模式）。打开后主代理收敛为编排者：规划（Step 0-3）、分派与验收、DevLoop 审查外部执行发起、状态维护、最终报告与知识沉淀留在主代理；Slice 开发、DevLoop 审查降级本地执行时的审查、Bugs 修复等实质执行按 `references/delegation.md` 分派子代理。连带强化两条纪律：DevGoal 每个 Slice 的验收标准必须是可执行命令；验收一律实际执行不信任子代理报告，验收失败的修复重新分派而非主代理自己动手
 
 ### 变量
 
@@ -70,7 +70,7 @@ metadata:
 
 产物路径均相对 `<working-dir>`，`<slug>` = `<task-slug>`：
 
-- 恒落档：外部审查·code-review（触发时才产生）`docs/reviews/<slug>-code-review/{prompt.md, review-<model>.md}`、最终报告 `docs/reports/<slug>.md`
+- 恒落档：DevLoop 审查·外部执行产物（外部执行发起时产生，含发起后运行时失败降级的情形；`--mode fix`/`--skip-review` 未发起则无此目录）`docs/reviews/<slug>-code-review/{prompt.md, review-<model>.md}`、最终报告 `docs/reports/<slug>.md`
 - light / quick 终端输出、full 落档：UltraThoughts `docs/thoughts/<slug>.md`、DevGoal `docs/tdd/<slug>.md`、Bugs `docs/qa/<slug>.md`
 - light 跳过、full 落档：外部审查·UltraThoughts/grill-me `docs/reviews/<slug>-{ultrathoughts, grill-me}/`、PRD `docs/plans/<slug>.md`
 - 仅 `--dissection` 生成（与模式无关）：需求树拆解 `docs/dissections/<slug>.md` 及其外部审查 `docs/reviews/<slug>-dissection/`
@@ -108,7 +108,7 @@ code-review → review → fixing → reporting → merging → done/blocked/mer
 node -e "console.log(new Date().toLocaleString('sv-SE'))"
 ```
 
-需求树拆解（`--dissection` 时）、UltraThoughts、grill-me、code-review 之后各有一个外部审查检查点，由外部审查 runner 执行；这些检查点不新增独立 phase，但会在 `state.json` 的 `reviews[]` 中分别记录。`--mode light`（默认）只保留 code-review 后的检查点与需求树拆解后的检查点（若 `--dissection` 开启）；`--mode full` 追加 UltraThoughts、grill-me 两个检查点（启用即执行，不适用 Step 6 的规模判据）。code-review 检查点默认跳过，仅较大改动触发执行（未触发时记 `reviews[]` `status=skipped`，操作路径见 Step 6）；触发时发起动作提前至 Step 5 顶部并后台执行，与本地 code-review 及下一 Slice 只读调研并行，Step 6 收集合并结果。需求树拆解检查点是 Gate（恒执行，不适用跳过规则）：审查失败或全部降级时 phase → `blocked`，拆解结果未经正交检查不得进入 Step 2。
+需求树拆解（`--dissection` 时）、UltraThoughts、grill-me、Slice 开发完成（code-review 检查点）后各有一个外部审查检查点，由外部审查 runner 执行；这些检查点不新增独立 phase，但会在 `state.json` 的 `reviews[]` 中分别记录。`--mode light`（默认）只保留 code-review 检查点与需求树拆解检查点（若 `--dissection` 开启）；`--mode full` 追加 UltraThoughts、grill-me 两个检查点（启用即执行）。code-review 检查点是 DevLoop 唯一审查、单轨执行：默认外部执行 flow-code-review 流程（外部异族模型按该技能流程审查并产出 findings JSON），每 Slice 恒执行一次；发起动作在 Step 5 顶部后台执行，与下一 Slice 只读调研并行，Step 6 收集 findings 并入 Bugs；`--mode fix`、`--skip-review` 或外部执行运行时失败降级为本地执行 flow-code-review（外部检查点记 `reviews[]` skipped/failed、不过 `review` phase，降级原因入决策台账与最终报告）。需求树拆解检查点是 Gate（恒执行，不适用跳过与降级规则）：审查失败或全部降级时 phase → `blocked`，拆解结果未经正交检查不得进入 Step 2。
 
 ## 停止点（--stop）
 
@@ -239,16 +239,17 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] 声明当前 Slice 名称与目标
      - [ ] 更新 `state.json`：`current_slice_index`，该 Slice `status → developing`、`start_time → node -e "console.log(new Date().toLocaleString('sv-SE'))"`，phase → `slicing` → `developing`
      - [ ] 预搜索 flow-mem 知识库（必须在进入该 Slice 开发之前完成；若 `~/.claude/skills/flow-mem` 不存在则跳过本项并在决策台账记一笔）：以三类查询词各跑一次 `node ~/.claude/skills/flow-mem/scripts/search.mjs --mode h4 --format line`（命中不足回退 `--mode fulltext --format line`；结果清单 `| head -100` 截断审阅，首行 hits=count/total 或 truncated 表明 total 超过所见条数时加大行数翻完，只见头部几条不得下「无相关命中」结论）——Slice 目标关键词、涉及的依赖包名、本 Slice 计划使用的工具与环境名（如浏览器驱动、测试 runner、构建部署链路；知识库高频收录工具类坑点，漏查工具词会在工具卡顿时重复踩已被记录的弯路），按命中结果的绝对路径读取完整条目，前序 Slice 已读取过的条目直接复用不重复读取；上一 Slice Step 5 并行调研窗口已完成本 Slice 三类检索与条目读取的，本项整体视为已完成、直接复用不重复检索；命中的已知坑点与版本特定行为作为当前 Slice 的开发约束，在本 Slice 开发中主动规避（约定见 `~/.claude/skills/flow-mem/references/search.md`，检索只读不改知识库）
-     - [ ] **若 `--delegate`**：主代理不亲自开发——先记录 Slice 基 ref（`git rev-parse HEAD`，写入 `state.json` 该 Slice 的 `base_ref`），按 `references/delegation.md` 开发模板分派开发子代理（预搜索命中的坑点要点注入分派 prompt）；子代理返回后逐项执行验收清单并回填 `state.json`；验收失败的缺口转 Bug 输入，按 Step 7 规则重新分派修复（计入 `fix_round`）。以下内联开发项不适用
+     - [ ] 记录 Slice 基 ref：`git rev-parse HEAD`，写入 `state.json` 该 Slice 的 `base_ref`——DevLoop 审查凭它框定本 Slice 的 diff 范围（外部执行在 prompt 中陈述，本地执行以 `--base` 传入），resume 后跨 Slice 续跑也凭它恢复 diff 基线
+     - [ ] **若 `--delegate`**：主代理不亲自开发——按 `references/delegation.md` 开发模板分派开发子代理（预搜索命中的坑点要点注入分派 prompt）；子代理返回后逐项执行验收清单并回填 `state.json`；验收失败的缺口转 Bug 输入，按 Step 7 规则重新分派修复（计入 `fix_round`）。以下内联开发项不适用
      - [ ] 内联模式（未传 `--delegate`）：进入开发，直到该 Slice 的 DevGoal 达成；**开发中允许子任务提交**（`--stage` 时除外）：完成一个内聚子任务即可提交（仅 `git add` 该子任务涉及的文件），提交纪律同 Step 7 收口项；子任务提交非必须，Slice 收尾统一收口见 Step 7
-5. 仅当当前 Slice 的 DevGoal 达成时，执行 `flow-code-review` 技能，确认待修复问题 Bugs
+5. 当前 Slice 的 DevGoal 达成时，发起 DevLoop 审查（默认外部执行 flow-code-review 流程；完整约定见 `references/external-review-protocol.md`）
 
    - [ ] 已确认当前 Slice 的 DevGoal 达成（按 `--depth` 查 `references/quality-gates.md`）
    - [ ] 若未达成：记录 `slice-blocked` blocker，写 blocker 报告，phase → `blocked`，停止
-   - [ ] **外部审查提前后台发起**（满足 Step 6 触发判据时执行；未触发或传入 `--skip-review` 时跳过本项，由 Step 6 记 skipped；`--mode fix` 恒跳过本项，Step 6 按模式禁用记 skipped）：本地 code-review 与外部审查互不依赖——prompt.md 只陈述已查维度、不含本地审查结果，提前发起让两者并行
+   - [ ] **DevLoop 审查·外部执行（默认路径）**（传入 `--mode fix` 或 `--skip-review` 时跳过本项，走本地执行分支）：外部异族模型执行 flow-code-review 流程——正交视角与结构化纪律一遍完成，是 DevLoop 唯一审查，每 Slice 恒执行一次
      - [ ] 由主代理直接调用 runner，禁止通过 `Agent` 工具 spawn 子代理执行（后台指 Bash `run_in_background`，仍是主代理本人发起，与该约束不冲突）
-     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-code-review', task: '<caller-model> 完成 code-review', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-code-review/prompt.md`，内容包含任务描述、被审查文件、审查要求与输出格式；审查要求按陈述式——**陈述 code-review 已查的维度（只列维度、陈述事实，不下达审查指令、不暴露自评盲区）**，调用约定见 `references/external-review-protocol.md`「调用方式」
+     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-code-review', task: '<caller-model> 完成 Slice 开发', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
+     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-code-review/prompt.md`，内容：任务描述（Slice 名与目标）、审查仓库 `<working-dir>`（外部模型执行 git 命令前先 cd 到该目录）、diff 基线 `base_ref`（本 Slice 改动 = `git diff <base_ref>...HEAD` + 工作区未提交改动）、审查方法（读取 `~/.claude/skills/flow-code-review/SKILL.md` 及其 references 并按其流程执行，调用语义等价于 `--json --effort <档位> --base <base_ref>`）、Slice 验收标准（只陈述事实、不下达关注指令）、输出契约（仅输出 flow-code-review `--json` 契约的 findings JSON 数组，以 JSON 代码围栏包裹，无问题输出 `[]`）；prompt 模板见 `references/external-review-protocol.md`「DevLoop 审查 prompt」
      - [ ] 后台调用 runner（Bash `run_in_background: true`；发起后不等待结果，继续本步骤后续项，结果在 Step 6 收集）：
        ```bash
        python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py \
@@ -257,38 +258,42 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
          --prompt-file <working-dir>/docs/reviews/<task-slug>-code-review/prompt.md \
          --caller-model <caller-model> \
          --effort normal \
+         --no-preamble \
          --timeout 1800
        ```
-   - [ ] 执行本地 code-review：内联模式按「外部依赖入口」加载本地 diff review skill（`~/.claude/skills/flow-code-review/SKILL.md`），以 `--json --effort <档位>` 调用；**若 `--delegate`** 按 `references/delegation.md` 审查模板分派审查子代理——`--effort` 同档位，`--base` 必传该 Slice 的 `base_ref`（Slice 改动已由开发子代理提交，缺省 target 会把前序 Slice 一并审进），子代理最终文本即 findings JSON
+       `--no-preamble` 必传——light 前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程及 findings JSON 契约冲突
+   - [ ] **DevLoop 审查·本地执行（降级路径）**（仅 `--mode fix` 或 `--skip-review` 传入时执行；外部执行运行时失败由 Step 6 回溯降级到本分支）：内联模式加载 flow-code-review 技能（`~/.claude/skills/flow-code-review/SKILL.md`），以 `--json --effort <档位> --base <base_ref>` 调用；**若 `--delegate`** 按 `references/delegation.md` 审查模板分派审查子代理（`--effort` 同档位，`--base` 必传该 Slice 的 `base_ref`），子代理最终文本即 findings JSON
    - [ ] review effort 按运行模式选择（详见 `references/quality-gates.md`）：
      - [ ] `--mode light`（默认）/ `--mode quick` / `--mode dev` / `--mode fix` → `low`
      - [ ] `--mode full` → `medium`
      - [ ] `high` / `xhigh` 不在自动流程启用；需要更深审查时人工直接跑 `flow-code-review`
-   - [ ] 该 effort 只作用于本地 code-review；Step 6 外部正交审查（runner）effort 锁定 `normal`，不受影响
-   - [ ] 已确认待修复问题 Bugs
-   - [ ] 默认终端输出 Bugs；`--mode full` 时写入 `<working-dir>/docs/qa/<task-slug>.md`
-   - [ ] 更新 `state.json`：phase → `code-review`，当前 Slice `status → reviewing`，`outputs.bugs_path`
-   - [ ] **下一 Slice 并行调研窗口**（仅当外部审查已后台在跑且仍有后续 Slice 时执行；否则跳过本项）：利用外部审查等待期，在主代理上下文内对下一个 Slice 做只读调研（不 spawn 子代理，保持可随时收尾进入 Step 6）
+   - [ ] 该 effort 作用于 flow-code-review 流程本身（无论外部执行还是本地执行）；runner 的 `--effort`（模型数量）锁定 `normal`，与之解耦
+   - [ ] 更新 `state.json`：phase → `code-review`，当前 Slice `status → reviewing`
+   - [ ] **下一 Slice 并行调研窗口**（仅当外部执行已后台在跑且仍有后续 Slice 时执行；否则跳过本项）：利用外部执行等待期，在主代理上下文内对下一个 Slice 做只读调研（不 spawn 子代理，保持可随时收尾进入 Step 6）
      - [ ] flow-mem 预搜索：查询词与检索纪律同 Step 4 预搜索项（三类查询词、`--format line`、`head -100` 审阅）；窗口已完成三类检索与条目读取的，后续 Slice 的 Step 4 预搜索项视为已完成，直接复用不重复检索
      - [ ] 代码与方案调研：阅读下一 Slice 计划触及的代码与相关依赖文档（Context7 / 搜索技能等只读来源），形成实现思路草稿
      - [ ] **禁止任何写入**：不改代码、不写文档、不更新 Slice 状态、不执行 git 操作与 flow-mem --learn；调研结果以终端小结输出、不落档
      - [ ] 会合纪律：调研完成而外部审查未结束，进入 Step 6 用 TaskOutput 阻塞等待；外部审查完成通知先到，收尾当前调研动作即进入 Step 6
-6. **外部正交审查（code-review）**（触发时发起点在 Step 5 顶部、后台并行执行，本步为结果收集与合并，位于修复之前；`--skip-review` 跳过；**`--mode fix` 恒禁用本检查点**，直接走默认路径记 skipped；**默认跳过，仅较大改动触发**——触发判据满足任一即执行：触及架构/安全/数据契约/公共接口，或改动规模较大（软性锚点：增删合计约超 80 行 / 波及超 3 个文件），或 `--depth=hifi`（质量门含外部审查通过，恒执行）；边界情况倾向跳过——本地 flow-code-review 已先行覆盖一轮，由主代理按改动性质裁量，展开判据见 `references/external-review-protocol.md`）
+6. **DevLoop 审查结果收集，确认待修复问题 Bugs**（外部执行的发起点在 Step 5 顶部、后台并行；本步收集 findings 并入 Bugs，位于修复之前；本地执行直接使用 Step 5 所得 findings JSON）
 
-   - [ ] **默认路径：跳过本检查点**（Step 5 未后台发起审查）：在 `state.json` 的 `reviews[]` 中追加一条 code-review 检查点记录（slug `<task-slug>-code-review`，`start_time` = `end_time` = 当前时间，`reviews: [{ status: 'skipped', error: '<跳过原因>' }]`——跳过原因按实际填 `改动未达触发判据，跳过` 或 `fix 模式禁用外部审查`），随后直接进入 Step 7，本步骤其余子项不再执行
-   - [ ] **触发路径：收集与合并**（发起动作与 reviews[] 起始记录已在 Step 5 完成）：
+   - [ ] **外部执行路径**（Step 5 已后台发起）：
      - [ ] 用 TaskOutput 阻塞收取 Step 5 后台任务的输出，取得 runner 返回的 JSON
      - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
-     - [ ] **若后台任务异常退出或未返回 JSON，或全部 target_model 的 status 为 `failed`/`degraded`，禁止进入 Step 7**：记录 `external-review-failed` blocker，phase → `blocked`，在最终报告中显式标注；degraded 处置前先按鉴别锚点 Read 产物核实（单行阴性结论=校验器误判按通过记，空产物=真实失败，见 references/external-review-protocol.md「结果处理」）
-     - [ ] 若任一模型 `status=degraded`（非全部），把降级原因写入决策台账
-     - [ ] 合并外部审查发现到 Bugs（去重），纳入下一步修复
+     - [ ] **degraded 鉴别锚点**：任一模型 `status=degraded` 时先 Read 其 `result_path` 产物核实内容——产物含可提取的 findings JSON（含 `[]`）按实质通过记；产物为空或缺实质内容 = 真实失败（见 references/external-review-protocol.md「结果处理」）
+     - [ ] **运行时失败降级本地执行**（runner 未返回 JSON，或全部 target_model 的 status 为 `failed`/`degraded` 且产物不可采纳，或产物无法提取出 findings JSON）：`--depth hifi` 时不降级——记录 `external-review-failed` blocker，phase → `blocked`（hifi 质量门含外部执行通过，降级会使其失效；恢复后 `--resume` 可重发收集，blocked 现场保留）；否则不阻塞——回溯执行 Step 5 本地执行分支，把外部检查点 failed/degraded 记录与降级原因记入 `reviews[]`，降级原因写入决策台账与最终报告，随后以本地执行的 findings 继续确认 Bugs
+     - [ ] 读取各审查产物 `review-<model>.md`，提取 findings JSON 数组合入 Bugs（去重；逐条按 failure_scenario 具体性裁决严重度纳入 P0/P1）
      - [ ] 更新 `state.json`：phase → `review`
+   - [ ] **本地执行路径**（`--mode fix`/`--skip-review`，或外部执行运行时失败降级而来）：将 Step 5 所得（或降级执行所得）findings JSON 合入 Bugs（去重、严重度裁决）；不过 `review` phase
+     - [ ] Step 5 未发起外部执行时（`--mode fix`/`--skip-review`）：在 `state.json` 的 `reviews[]` 中追加一条 code-review 检查点记录（slug `<task-slug>-code-review`，`start_time` = `end_time` = 当前时间，`reviews: [{ status: 'skipped', error: '<跳过原因>' }]`——跳过原因按实际填 `fix 模式禁用外部执行` 或 `--skip-review 禁用外部审查`）
+   - [ ] 已确认待修复问题 Bugs
+   - [ ] 默认终端输出 Bugs；`--mode full` 时写入 `<working-dir>/docs/qa/<task-slug>.md`
+   - [ ] 更新 `state.json`：`outputs.bugs_path`
 7. 针对 Bugs（含外部审查发现）执行 `tdd` 技能，自动推进修复，但有轮数上限
 
    - [ ] 已读取 `~/.claude/skills/tdd/SKILL.md`
    - [ ] 当前 Slice 进入 `status → fixing`，phase → `fixing`，`fix_round` 自增
    - [ ] 自动推进全部 Bugs 修复：内联模式主代理直接执行；**若 `--delegate`** 按 `references/delegation.md` 修复模板分派修复子代理（附 Bugs 清单与验收命令），返回后逐项执行验收清单（同 Step 4）；主代理不亲自修代码
-   - [ ] 修复后重新验证相关测试与 code-review（`--delegate` 时复跑 code-review = 重新分派审查子代理，`--base` 仍用该 Slice 的 `base_ref`）
+   - [ ] 修复后复跑相关测试与 Slice 验收命令确认收敛——**不复跑审查**：审查每 Slice 只发生一次（Step 5/6），复跑会对修复 diff 产生新 findings，把修复轮次拖入递减收益循环；收敛判据 = Bugs 逐条关闭（每条修复有测试佐证）且测试与验收命令通过。`--delegate` 时收敛 = 主代理实际执行验收清单逐项通过（见 `references/delegation.md`），不重新分派审查子代理
    - [ ] **提交收口**（Bugs 全部关闭后执行；Slice `done` 的前置条件；worktree 模式下在 `<working-dir>` 中提交；`--delegate` 时提交已由修复子代理按分派纪律完成，本项退化为验收清单的提交核对与工作区校验，并把 `commits[]` 回填 `state.json`）：
      - [ ] 提交边界：仅 `git add` 归属当前 Slice 的文件清单，禁止 `git add -A` / `git add .`（避免卷入非本 Slice 改动或来源不明的残留）；`docs/*` 产物与 `<run-dir>` 已被忽略、不进提交
      - [ ] **若 `--stage`**：不执行提交，把本 Slice 提交计划（建议 message + 文件清单；Slice 内多 commit 时逐条列出）记入 `state.json` 该 Slice 的 `commit_plan[]`，跳过本项其余子项
@@ -308,7 +313,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] `<task-slug>` 与 `<run-dir>`
      - [ ] 决策台账（`--mode light`/`full` 时含；`--mode quick`/`dev`/`fix` 不生成 decisions.md，改为列出 high-risk pending decision 备注）
      - [ ] 每个 Slice 的完成状态（含 `start_time`、`end_time`）
-     - [ ] 各外部审查检查点状态（各检查点 slug、caller_model、effort、`start_time`、`end_time`、reviews[] 中每个 target_model 的 status，含 degraded 情况）
+     - [ ] 各外部审查检查点状态（各检查点 slug、caller_model、effort、`start_time`、`end_time`、reviews[] 中每个 target_model 的 status，含 degraded 情况；DevLoop 审查降级本地执行的，附降级原因）
      - [ ] blocker 报告链接（如有）
      - [ ] 提交记录：逐 Slice 列出 `commits[]` 的 hash 与 message；blocked Slice 的残留未提交改动显式标注。`--stage` 时替换为逐 Slice 提交计划（各 Slice `commit_plan[]` 的建议 message 与文件清单，执行顺序即 Slice 顺序）
    - [ ] 已经输出提交记录（`--stage` 时为提交计划）到终端
@@ -317,6 +322,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
 
    - [ ] 清空 Tasks
    - [ ] 主动触发 flow-mem 知识沉淀（若 `~/.claude/skills/flow-mem` 不存在则跳过）：读取 `~/.claude/skills/flow-mem/SKILL.md`，执行其 --learn 分支（沉淀固定在收尾执行、不随 Slice 循环进行：开发中途的结论未经完整验证，过早沉淀会写入假知识），内容来源为本次 flow-dev 运行产物而非整个会话——`<run-dir>/decisions.md`（`--mode quick`/`dev`/`fix` 不生成，跳过该 input）、`<run-dir>/blocker-report.md`（如有）、最终报告（`outputs.report_path`；`--mode fix` 不落档，跳过该 input）、`<working-dir>/docs/reviews/` 下本次运行的外部审查发现（`--mode fix` 恒禁用外部审查，无此 input），以多个 `--input <路径>` 传入；`--mode fix` 下输入通常仅剩 blocker-report.md（如有），无输入时按入库门槛（顺利实现不沉淀）跳过 --learn 并终端一行说明；按 flow-mem 的入库门槛沉淀——框架与库的技术知识（调试弯路、候选核实、版本行为）归 framework 切片；任务中有我明确表态（纠正、否决、拍板、显性验收）锚定的偏好与决策归 decisions 切片；没有弯路的顺利实现与任务业务细节不沉淀；知识库为本地积累目录（不入版本控制），沉淀产物不进本项目提交
+   - [ ] 更新项目相关文档（如有）
    - [ ] **提交动作（按 `--stage` 分支）**：
      - [ ] 默认（auto-commit）：所有已完成 Slice 已在各自 DevLoop 中提交收口，本步无剩余提交动作；`git status --porcelain` 校验工作区——若有残留（blocked Slice 未提交改动或来源不明的异常残留），不自动提交，终端显式标注交由我处理
      - [ ] `--stage`：不执行提交，终端输出手动提交指引——逐 Slice 提交计划回顾（完整计划已落档最终报告 `outputs.report_path`）、声明本轮未提交改动、由我按计划自行执行
@@ -325,13 +331,14 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] **若 `--stage`**：无已提交改动即无可合并内容——跳过合并询问，强制 keep 分支；收尾决策写明原因与后续步骤（手动提交后把 `<worktree-branch>` 合并回 `<original-branch>` 再清理，流程见 `references/worktree-mode.md`）
      - [ ] 用户回复 yes（合并并清理）：
        - [ ] 确认 `<working-dir>` 中工作区干净（`git status --porcelain` 无输出）——逐 Slice 提交后正常路径天然满足；若有残留（blocked Slice 未提交改动），停止合并流程、保留 worktree、终端标注残留处置（提交后重走合并或手动处理），禁止使用 `ExitWorktree` remove 丢失残留
+       - [ ] **docs 产物接回主仓**：产物被 git 忽略、不随 merge 进入 `<original-branch>`，清理 worktree 前按 `references/worktree-mode.md`「docs 产物接回主仓」把 `<working-dir>/docs/` 下存在的产物目录复制回 `<repo-root>`，否则随 worktree 删除丢失
        - [ ] 切回 `<repo-root>` 的 `<original-branch>`，用 `git branch --show-current` 重新确认
        - [ ] 执行 `git merge --no-ff <worktree-branch>`
-       - [ ] **若冲突**：停止、不自动解决、写 `merge-conflict` blocker、phase → `merge-conflict`、保留 worktree
+       - [ ] **若冲突**：停止、不自动解决、写 `merge-conflict` blocker、phase → `merge-conflict`、保留 worktree（产物仍在 worktree 内，冲突解决后可重走接回与清理）
        - [ ] 若合并成功，使用 `ExitWorktree` 的 `action: "remove"` 退出并清理 worktree
      - [ ] 用户回复 keep 或未回复：
        - [ ] 使用 `ExitWorktree` 的 `action: "keep"`，仅恢复原始 cwd
-       - [ ] 保留 worktree 目录与分支供手动 review
+       - [ ] 保留 worktree 目录与分支供手动 review；建议同样执行 docs 产物接回（最终报告等以 `<repo-root>` 为单一查看入口），不接回时收尾决策注明产物仍在 worktree、未来清理会丢失
    - [ ] 更新 `state.json`：phase → `done`/`merge-conflict`/`blocked`，`end_time`
 
 ## BAN
