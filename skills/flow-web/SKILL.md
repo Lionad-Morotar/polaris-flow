@@ -13,32 +13,19 @@ metadata:
 3. 当任务涉及打开 URL 时，**优先使用 `open-tab.sh`**：默认会根据当前 cwd 的 workspace 绑定自动选择目标窗口；只有明确要求新窗口时才加 `--new-window`
 4. 操作浏览器在需要的网站完成任务（也许可以网站参考章节找到既有的工作流程）
 5. 当用户任务完成后，你可以提醒用户新增网站任务参考，或更新现有工作流程
-  5.1 当用户确认新增或更新，读取写入规范与自检清单：[skill-maintenance.md](references/skill-maintenance.md)
+  5.1 当用户确认新增或更新，读取写入规范与自检清单 `references/skill-maintenance.md`
 
 ## 网站参考
 
-* [ai.example-corp.com](references/ai.example-corp.com/agent-create-tour.md) — 本地 dev 站（localhost:1886）验收智能体导游模式创建链路：引导发起、高亮/气泡断言、点击回执闭环、落库验证；含 reka-ui Select 合成点击、vite checker 遮罩拦截、UModal 关闭残留等坑
-* [ai.example-corp.com](references/ai.example-corp.com/chat-chart-testing.md) — 本地 dev 站聊天页 genui 图表生成验证：发消息/发送按钮、图表渲染断言（svg 0x0 诊断）、Vue 组件降级抓错、CDP console 捕获、元素截图黑背景等坑
-* [anthropic.com](references/anthropic.com/read-engineering-blog.md) — 读取 Anthropic Engineering 博客文章
-* [bing.com](references/bing.com/search-and-extract.md) — 提取 Bing 搜索结果
-* [code.claude.com](references/code.claude.com/read-doc-page.md) — 读取 Claude Code 官方文档页
-* [github.com](references/github.com/create-issue.md) — 新建 issue：查重、URL/fill 双路径预填、React 表单验证
-* [github.com](references/github.com/read-issue.md) — 读取 GitHub issue / PR 正文与评论
-* [github.com](references/github.com/read-release.md) — 读取 GitHub Release notes 与 assets
-* [google.com](references/google.com/search-and-extract.md) — 提取 Google 搜索结果
-* [loomal.ai](references/loomal.ai/*.md) — AI Agent 支付层 Console：GitHub SSO 登录、Hosted 三模式/自有端点创建、项目设置与计费、危险操作（Rotate Key 无确认、升级跳 Stripe）
-* [maxai.co](references/maxai.co/ask-top-model.md) — 向顶级模型提问（GPT-5.6-Thinking 等）：切模型、发问题、轮询完成、提取正文（webbridge 原生 action 失效需合成事件兜底）
-* [mp.weixin.qq.com](references/mp.weixin.qq.com/archive-article.md) — 微信公众号文章归档：curl 优先于浏览器（data-src 懒加载、blob 占位、Referer 防盗链、视频三形态）
-* [news.ycombinator.com](references/news.ycombinator.com/read-thread.md) — 读取 Hacker News 帖子与评论树
-* [npmjs.com](references/npmjs.com/read-package.md) — 读取 npm 包信息
-* [reddit.com](references/reddit.com/read-thread.md) — 读取 Reddit 帖子与评论树
-* [youmind.com](references/youmind.com/generate-image-and-save.md) — 提交图片生成任务、判断出图成功、下载原图到本地（区分原图/缩略图、绕过「保存」按钮）
+站点操作手册为本地积累，按域分册（`references/<domain>/<task>.md`），跨站通用经验在 `references/common/`；不随开源仓分发，全新克隆的 `references/` 可能为空。
 
-其他特定方向的经验参考。
+发现协议（任务可能存在既有工作流时）：
 
-* [skill-maintenance.md](references/skill-maintenance.md) — 本技能（flow-web）与 reference 的维护流程、规范、自检清单
-* [cdp-recovery.md](references/cdp-recovery.md) — CDP 会话恢复与诊断
-* [openapi-merge.md](references/openapi-merge.md) — 多个 OpenAPI JSON 合并为单插件
+1. 读 `references/index.md` —— 索引全部现存手册，附一行说明
+2. 无索引时枚举 `references/` 目录，按文件名判断相关性
+3. 仍无命中则按新站点任务处理，完成后按维护流程沉淀手册与索引
+
+手册与索引的维护入口：`references/skill-maintenance.md`（写入规范与自检清单）。
 
 ## 浏览器操作指南
 
@@ -123,7 +110,7 @@ open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--
 * 返回 JSON 含 `tabId`，拿到后用同一 `--session` 继续操作
 * 脚本会先调用 `ensure-webbridge.sh` 保证 daemon 与扩展已就绪，无需手动等待
 
-工作区 UUID 与 `--launch-workspace` 的详细机制见 [references/common/edge-workspace-launch.md](references/common/edge-workspace-launch.md)。
+工作区 UUID 与 `--launch-workspace` 的详细机制见 `references/common/edge-workspace-launch.md`（本地手册，按「网站参考」发现协议定位）。
 
 ### 并发安全
 
@@ -163,7 +150,7 @@ open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--
 * 配置类操作一律走 UI，不走 API
 * 表单填写用 `fill`，搜索框实时过滤用 `type`
 * 任务结束调用 `close_session` 清理 tabs（用户明确要求保留除外）
-* 常驻运行：使用 LaunchAgent 让 daemon 登录自启，详见 [references/common/launchd-autostart.md](references/common/launchd-autostart.md)
+* 常驻运行：使用 LaunchAgent 让 daemon 登录自启，详见 `references/common/launchd-autostart.md`（本地手册）
 * 绝对不要 kill 用户主力浏览器进程（Edge/Safari/Chrome）
 * 绝对不要 使用 edge-cdp / safari-mcp / Playwright / WebFetch / chrome_mcp / browse 作为本技能的下位替代
 * 任务完成后关闭多余标签页
