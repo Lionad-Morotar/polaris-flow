@@ -19,6 +19,7 @@ metadata:
 按应用域路由到对应手册；无匹配域时列出现有分册清单后停止。
 
 - claude-code 域：「跟踪会话状态」「会话还在推进吗」「等待 xxx 会话结束」→ 读 `references/claude-code/track-session-state.md`
+- claude-mem 域：「记忆条目脏了」「清洗 claude-mem 条目」「worker 起不来/卡初始化」「claude-mem 升级后重打补丁」→ 读 `references/claude-mem/maintain-observations.md`
 
 ## 外部依赖入口
 
@@ -46,3 +47,4 @@ metadata:
 
 - `references/claude-code/track-session-state.md`：行数探针法手册——原理、口径、判读规则、`--wait` 等待模式、脚本输出契约；Workflow A 必读
 - `references/claude-code/scripts/count-session-lines.mjs`：行数统计与等待脚本本体
+- `references/claude-mem/maintain-observations.md`：观察条目清洗与运维手册——架构与数据流、污染根因、三层修法（bundle 补丁 + modes 提示词 + 存量清洗）、升级重放、worker 排障；脚本本体在 `~/.claude-mem/patches/`
