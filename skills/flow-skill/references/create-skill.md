@@ -128,6 +128,13 @@ Preflight 范式（flow 家族统一）：
 - references 只允许一层深：references/ 下不再嵌套子目录或二级引用链
 - SKILL.md 保持路由 + 骨架职责：读完它应知道「做什么、按什么顺序、去哪查细则」，不该包含细则本身
 
+本地积累区与索引分离：references/ 若为本地积累数据（站点 playbook、知识库条目、应用手册），随使用增长且含内部操作细节，gitignore 整目录排除不入库——此时 SKILL.md 禁止枚举本地文件，枚举即向开源仓泄漏本地目录结构并制造死链：
+
+- SKILL.md 只写组织约定（`references/<domain>/<task>.md`）与发现协议（先读 `references/index.md`，无索引时枚举目录）
+- 清单唯一落点是 `references/index.md`（随目录 ignore），新增/更新手册时同步维护
+- 形态纪律：markdown 链接只指向仓内跟踪文件，本地文件一律用代码跨度提及——pre-push 死链闸强制（scan.mjs 的 dead-links 检查，命中即阻断推送）
+- 数据层 references 豁免「一层深」纪律（如 flow-mem 知识库、flow-web 站点 playbook），但受本节约束
+
 ## 强调纪律
 
 - 非必要不使用「**」着重号；强调依靠选词与语序，而非加粗。
@@ -153,7 +160,8 @@ rg -o --no-filename -g '*.md' '\*\*' <skill-dir> | wc -l
 - [ ] 正文无时效性信息（日期、「目前最新」之类会过期的断言；frontmatter 的 metadata.version 是机器契约，不在此列）
 - [ ] 术语全文一致
 - [ ] 含具体示例（好/坏对照优于抽象描述）
-- [ ] references 只有一层深
+- [ ] references 只有一层深（数据层积累区豁免，但须满足下条）
+- [ ] 本地积累 references：SKILL.md 不枚举本地文件（清单在 ignore 的 index.md），markdown 链接全部指向跟踪文件
 - [ ] 全技能 md 文件「**」总量 < 文件数 × 10
 - [ ] 正文无代码块外的 Markdown 表格（参数/字段/对比用列表；lint `no-tables`）
 - [ ] 符号链接部署有效：`readlink ~/.claude/skills/<name>` 指向实际目录、无悬空
