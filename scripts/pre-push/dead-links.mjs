@@ -34,7 +34,12 @@ export function checkDeadLinks(repoDir, sha, skillMdPaths) {
   for (const file of skillMdPaths) {
     let content;
     try {
-      content = execFileSync("git", ["show", `${sha}:${file}`], { cwd: repoDir, encoding: "utf8" });
+      content = execFileSync("git", ["show", `${sha}:${file}`], {
+        cwd: repoDir,
+        encoding: "utf8",
+        // 文件在该提交不存在时 git show 的 stderr 报错是预期路径,静默之
+        stdio: ["ignore", "pipe", "ignore"],
+      });
     } catch {
       continue; // 该提交里文件被删除或改名,无从校验
     }
