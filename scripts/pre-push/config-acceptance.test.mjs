@@ -51,7 +51,7 @@ function setupFixture(t) {
     path.join(work, "leak.txt"),
     [
       `sk-ant-api03-${rand(68)}`,
-      // 验收夹具必须携带真实脏形态,gitleaks:allow 豁免本行(仅本行)不被自家 hook 拦截
+      // 验收夹具必须携带逼真脏形态(合成号,命中号段规则即可),gitleaks:allow 豁免本行(仅本行)不被自家 hook 拦截
       "tel 18500000001", // gitleaks:allow
       "deploy at /Users/realname/projects/x", // gitleaks:allow
       "site: internal-example-corp.com",
