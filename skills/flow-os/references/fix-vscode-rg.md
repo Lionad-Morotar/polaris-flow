@@ -163,26 +163,27 @@ VSCode **不支持** `search.rgPath` setting——app bundle 全文 0 命中，r
 人工 `--on` 之外另有一道 launchd 定时巡检：登录时跑一次、此后每整点检测所有内置 rg 是否仍处于包装态，发现未包装即弹系统通知，提醒回来执行本手册。只告警、不自动改二进制——修复保留上面的验证流程。
 
 - 脚本（全部逻辑、路径、通知文案都在这里，就近维护）：`scripts/rg-wrap-guard.sh`
-- 瘦 plist（launchd 只从 `~/Library/LaunchAgents/` 加载，故仅此一个指针文件散在外面）：`~/Library/LaunchAgents/com.example.rg-wrap-guard.plist`
+- 瘦 plist（launchd 只从 `~/Library/LaunchAgents/` 加载，故仅此一个指针文件散在外面）：`~/Library/LaunchAgents/com.<user>.rg-wrap-guard.plist`（`<user>` 为本机命名，下同）
 - 日志：`~/logs/rg-wrap-guard/guard.log`（巡检记录）、`launchd-std{out,err}.log`（launchd 捕获）
 
 检测原理与包装产物一致：`rg_backup` 兄弟文件存在 且 `rg` 本体非 Mach-O，任一不满足即判失效。发现用的 `find` 通配与上文「发现所有内置 rg」完全相同——路径自适应，绝不写死。
 
-历史教训：旧的 `com.example.wrap-vscode-rg` 把 rg 路径硬编码成 `@vscode/ripgrep`，VSCode 迁移到 `@vscode/ripgrep-universal` 后找不到文件、静默 SKIP 了 6 周（防线死了无人知晓；其 plist 已退役备份为 `.bak`）。本巡检因此绝不写死路径；若上文 find 通配日后变更，须同步修改 `rg-wrap-guard.sh`，两者必须一致。
+历史教训：旧的 `com.<user>.wrap-vscode-rg` 把 rg 路径硬编码成 `@vscode/ripgrep`，VSCode 迁移到 `@vscode/ripgrep-universal` 后找不到文件、静默 SKIP 了 6 周（防线死了无人知晓；其 plist 已退役备份为 `.bak`）。本巡检因此绝不写死路径；若上文 find 通配日后变更，须同步修改 `rg-wrap-guard.sh`，两者必须一致。
 
 手动触发与运维：
 
 ```sh
 UID_=$(id -u)
-launchctl kickstart "gui/$UID_/com.example.rg-wrap-guard"    # 立即巡检一次
+LABEL="com.$USER.rg-wrap-guard"                              # 按本机实际 plist 标签调整
+launchctl kickstart "gui/$UID_/$LABEL"                       # 立即巡检一次
 launchctl list | grep rg-wrap-guard                          # 看状态（上次退出码应为 0）
 tail ~/logs/rg-wrap-guard/guard.log                          # 看巡检记录
 
 # 卸载
-launchctl bootout "gui/$UID_/com.example.rg-wrap-guard"
-rm ~/Library/LaunchAgents/com.example.rg-wrap-guard.plist
+launchctl bootout "gui/$UID_/$LABEL"
+rm ~/Library/LaunchAgents/$LABEL.plist
 
 # 重装（改了脚本或 plist 后）
-launchctl bootout "gui/$UID_/com.example.rg-wrap-guard" 2>/dev/null
-launchctl bootstrap "gui/$UID_" ~/Library/LaunchAgents/com.example.rg-wrap-guard.plist
+launchctl bootout "gui/$UID_/$LABEL" 2>/dev/null
+launchctl bootstrap "gui/$UID_" ~/Library/LaunchAgents/$LABEL.plist
 ```
