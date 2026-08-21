@@ -143,24 +143,24 @@ step 1 启动 cron 后回填 `cron_id` 与 `cron_created_at`。
 
 5. **更新 changelog（片段，不打标）**
    - [ ] 本轮 slice 只写片段到 `.nsl/changelog.d/<slice>.md`（避免每轮改同一份 CHANGELOG 致合并冲突）
-   - [ ] epic 结束时（step 6）合并片段 + 调用 `release-project --changelog-only` 写入 `[Unreleased]`
+   - [ ] epic 结束时（step 6）合并片段 + 调用 `flow-release --changelog-only` 写入 `[Unreleased]`
    - [ ] 确认未升级版本、未打 tag、未推送、未切分支
 
 6. **评估开发方向是否结束**
    - [ ] 未结束 → 置 phase=idle，等 cadence 继续此方向（回 step 2）
    - [ ] 结束 → **合并前门控**（tsc/test:unit/lint/build 等），失败时尝试自动修复，不要暂停
-   - [ ] 门控通过 → 按 slice 顺序逐个 `merge --no-ff` 成 `feat/nsl-epic/<epic>`（遇冲突逐条解决）；合并片段 + `release-project --changelog-only` 写 [Unreleased]；epic 入 `pending_release`；置 phase=idle
+   - [ ] 门控通过 → 按 slice 顺序逐个 `merge --no-ff` 成 `feat/nsl-epic/<epic>`（遇冲突逐条解决）；合并片段 + `flow-release --changelog-only` 写 [Unreleased]；epic 入 `pending_release`；置 phase=idle
 
 7. **评估累积收尾**（每次 epic 入 pending_release 后）
    - [ ] 评估 pending_release 是否够 minor 版本（而不是 patch）
    - [ ] 不够 → 不要操作，等待 Cron 调度自动从 step 2 循环开发
    - [ ] 够 → **合并前门控**；通过 → 顺序合并这批 epic 到 `test`（不存在则基于 main 创建；仅确认无重叠才章鱼）
    - [ ] `CronDelete(cron_id)` 暂停，置 phase=awaiting-e2e
-   - [ ] 通知用户：test 就绪，请 e2e，完成后 `release-project` 发版（含 test→main），发版后喊 `/flow-polaris --resume`
+   - [ ] 通知用户：test 就绪，请 e2e，完成后 `flow-release` 发版（含 test→main），发版后喊 `/flow-polaris --resume`
 
 8. **用户 e2e 与发版**（人机切换，loop 暂停）
    - [ ] 用户在 `test` 端到端验证
-   - [ ] 用户调用 `release-project`（不带 --changelog-only），test→main → 版本号升级 → 打 tag → 推送
+   - [ ] 用户调用 `flow-release`（不带 --changelog-only），test→main → 版本号升级 → 打 tag → 推送
    - [ ] 此阶段 loop 不介入
 
 9. **恢复 loop**
