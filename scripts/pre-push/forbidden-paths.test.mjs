@@ -41,15 +41,16 @@ test("技能本机配置:flow-agent/flow-os 的 configs 除入库模板外拦截
   );
 });
 
-test("本地积累目录:flow-mem 知识库与 flow-web playbook/绑定缓存拦截", () => {
+test("本地积累目录:flow-mem 知识库、flow-web playbook 与 flow-app 应用手册/绑定缓存拦截", () => {
   const hits = checkForbiddenPaths([
     "skills/flow-mem/references/framework/git/diff.md",
     "skills/flow-mem/references/decisions/dev-tooling/index.md",
     "skills/flow-web/references/example.com/page.md",
+    "skills/flow-app/references/claude-code/track-session-state.md",
     "skills/flow-web/configs/workspace-bindings.json",
     "skills/flow-web/configs/workspace-uuids.json",
   ]);
-  assert.equal(hits.length, 5);
+  assert.equal(hits.length, 6);
 });
 
 test("正常源码与文档放行", () => {

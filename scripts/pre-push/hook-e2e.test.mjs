@@ -23,6 +23,7 @@ const RUNTIME_FILES = [
   ["scripts/pre-push/scan.mjs"],
   ["scripts/pre-push/git-ranges.mjs"],
   ["scripts/pre-push/forbidden-paths.mjs"],
+  ["scripts/pre-push/dead-links.mjs"],
   ["scripts/pre-push/merge-config.mjs"],
 ];
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * pre-push 扫描编排:读 stdin 的 ref 更新,对每个推送范围跑
- * gitleaks(内容形态)与禁止路径检查(路径策略),聚合报告并按结果退出。
+ * gitleaks(内容形态)、禁止路径检查(路径策略)与 SKILL.md 死链检查
+ * (引用策略),聚合报告并按结果退出。
  *
  * 用法:
  *   node scan.mjs [repoDir]          # repoDir 默认 cwd;stdin 协议见 githooks(5)
@@ -17,6 +18,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { checkDeadLinks } from "./dead-links.mjs";
 import { checkForbiddenPaths } from "./forbidden-paths.mjs";
 import { logOptsForUpdate, parsePrePushStdin } from "./git-ranges.mjs";
 import { resolveConfigPath } from "./merge-config.mjs";
@@ -64,6 +66,7 @@ export function runPrePush({ stdinText, repoDir, gitleaksBin = "gitleaks" }) {
   const updates = parsePrePushStdin(stdinText);
   const findings = [];
   const forbidden = [];
+  const deadLinks = [];
   const errors = [];
   const skipped = [];
   const seen = new Set();
@@ -104,12 +107,35 @@ export function runPrePush({ stdinText, repoDir, gitleaksBin = "gitleaks" }) {
           forbidden.push(hit);
         }
       }
+      // 以推送提交的树为准校验 SKILL.md 引用,挡住「对本地文件的引用」
+      const skillMds = touched.filter((p) => p.endsWith("SKILL.md"));
+      let links;
+      try {
+        links = checkDeadLinks(repoDir, update.localSha, skillMds);
+      } catch (e) {
+        errors.push({ kind: "git-error", ref: update.localRef, stderr: String(e.message).slice(-500) });
+        continue;
+      }
+      for (const hit of links) {
+        const key = `dead-link|${hit.file}|${hit.target}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deadLinks.push(hit);
+        }
+      }
     }
   } finally {
     cleanup();
   }
 
-  return { blocked: findings.length > 0 || forbidden.length > 0 || errors.length > 0, findings, forbidden, errors, skipped };
+  return {
+    blocked: findings.length > 0 || forbidden.length > 0 || deadLinks.length > 0 || errors.length > 0,
+    findings,
+    forbidden,
+    deadLinks,
+    errors,
+    skipped,
+  };
 }
 
 function printReport(result) {
@@ -119,6 +145,9 @@ function printReport(result) {
   }
   for (const h of result.forbidden) {
     console.error(`  [forbidden:${h.rule}] ${h.path}`);
+  }
+  for (const h of result.deadLinks) {
+    console.error(`  [dead-link] ${h.file} → ${h.target}(markdown 链接指向未跟踪文件;本地文件请改用代码跨度提及)`);
   }
   for (const e of result.errors) {
     if (e.kind === "gitleaks-missing") {
@@ -147,7 +176,9 @@ export function main(repoDir) {
     process.exit(2);
   }
   if (result.blocked) {
-    console.error(`pre-push 扫描发现 ${result.findings.length + result.forbidden.length} 处不应开源的内容,push 已阻断:`);
+    console.error(
+      `pre-push 扫描发现 ${result.findings.length + result.forbidden.length + result.deadLinks.length} 处不应开源的内容,push 已阻断:`,
+    );
     printReport(result);
     console.error("确认为误报可调整 .githooks/gitleaks.toml 豁免;紧急绕过用 git push --no-verify");
     process.exit(1);

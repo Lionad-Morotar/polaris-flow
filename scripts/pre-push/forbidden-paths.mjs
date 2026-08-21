@@ -35,10 +35,11 @@ const RULES = [
   },
   {
     name: "skill-local-accumulation",
-    // 本地积累区:知识库与站点 playbook 随使用增长且含内部操作细节,不随仓分发
+    // 本地积累区:知识库、站点 playbook 与应用手册随使用增长且含内部操作细节,不随仓分发
     test: (p) =>
       /^skills\/flow-mem\/references\/(framework|decisions)\//.test(p) ||
-      /^skills\/flow-web\/references\//.test(p),
+      /^skills\/flow-web\/references\//.test(p) ||
+      /^skills\/flow-app\/references\//.test(p),
   },
 ];
 
