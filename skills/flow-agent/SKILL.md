@@ -1,9 +1,9 @@
 ---
 name: flow-agent
 description: 主动发起外部正交审查：调用者描述自己用什么模型做了什么，flow-agent 从正交视角启动一个或多个模型的快速外部检查
-argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--deep] [--timeout <seconds>] [--output-dir <dir>]
+argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--deep] [--no-preamble] [--timeout <seconds>] [--output-dir <dir>]
 metadata:
-  version: 0.1.0-alpha.0
+  version: 0.1.0-alpha.1
 ---
 
 ## 概念澄清
@@ -34,6 +34,7 @@ metadata:
 - `--target-model`（默认 `auto`）：目标审查模型名或 `auto`。`auto` 时由 `--effort` 和 `--caller-model` 决定启动哪些模型
 - `--effort`（默认 `normal`）：审查强度：`normal`（启动一个与 caller 不同的模型，按映射表选择）/ `max`（normal + deepseek）/ `ultra`（所有非 caller 模型）/ `fable`（所有模型，包括 caller 模型，用于获得最大正交覆盖）
 - `--deep`（默认 关闭（light））：审查模式。默认 **light**：注入前言框定为快速正交 sanity check（聚焦会真正造成故障的高/中严重度发现，不逐行 review、不穷举边界、不搜索所有领域；无高/中严重度发现时整份输出仅一行结论，禁止罗列已验证角度或复述验证过程/成功路径；见 `references/prompt-template.md`）。`--deep` 切换为深入审查，保留调用方原始 prompt 不注入前言，并把 kimi 视角升级为 `kimi-k3-full`（全量 k3·1M 上下文）；light 模式 kimi 视角用 `kimi-k3`（k3-256k，强度等同、消耗更低）。旧名 `--full` 已移除：与 flow-dev `--mode full` 同名异义区隔，传入时报错并提示新写法
+- `--no-preamble`（默认 关闭）：跳过 light 前言注入，但不改变其余 light 行为（校验仍非空即过、kimi 视角不升级）。用于**流程驱动审查**：调用方 prompt 已完整定义审查流程与输出契约时（如 flow-dev DevLoop 让外部模型按 flow-code-review 流程执行并输出 findings JSON），前言的「快速 sanity check / 一行结论」框定与之冲突
 - `--timeout`（默认 `1800`）：单模型审查超时秒数。一般无需覆盖；如需覆盖不应低于 1800（复杂审查实测可达 600s+）
 - `--output-dir`（必填）：产物根目录，例如 `<working-dir>/docs/reviews`
 

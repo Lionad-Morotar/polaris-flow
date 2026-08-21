@@ -126,6 +126,7 @@ REVIEW_CLI_FLAGS = [
 # light 模式前言：默认注入到调用方 prompt 之前，框定审查范围（快速正交 sanity check，非穷尽审计）。
 # 核心是抑制审查模型"逐行 review / 穷举边界 / 搜索所有领域"的倾向——这是单次审查超时的主因之一
 # （max effort 下模型会自发深挖）。措辞与 prompt-template.md 的 light 审查边界保持一致，供其他 agent 参考。
+# --deep / --no-preamble 均跳过注入：前者自带逐领域详查语义，后者由调用方 prompt 完整定义审查流程。
 LIGHT_PREAMBLE = (
     "【审查模式：light 正交审查】\n"
     "这是一次快速正交 sanity check，不是穷尽审计。"
@@ -612,6 +613,13 @@ def main():
         default=False,
         help="深入审查模式（逐领域详查），kimi 视角升级为 kimi-k3-full（全量 k3）；默认 light 模式，注入前言框定为快速正交 sanity check",
     )
+    parser.add_argument(
+        "--no-preamble",
+        action="store_true",
+        default=False,
+        help="跳过 light 前言注入（流程驱动审查用：调用方 prompt 完整定义审查流程与输出契约时，前言的"
+        "「快速 sanity check / 一行结论」框定与之冲突）；校验仍按 light（非空即过），kimi 视角不升级",
+    )
     # 旧 flag 迁移提示:--full 已改名 --deep(与 flow-dev --mode full 同名异义区隔),传入即报错
     if "--full" in sys.argv:
         print("错误: --full 已移除,请改用 --deep(深入审查模式)", file=sys.stderr)
@@ -663,9 +671,11 @@ def main():
 
     prompt = prompt_file.read_text(encoding="utf-8")
 
-    # light 模式（默认）注入前言框定审查范围；--deep 时保留调用方原始 prompt 不注入。
+    # light 模式（默认）注入前言框定审查范围；--deep 与 --no-preamble 保留调用方原始 prompt 不注入。
     # 写在调用方 prompt 之前，让审查模型先建立"快速 sanity check"的预期，抑制逐行深挖。
-    if not args.deep:
+    # --no-preamble 服务流程驱动审查（如 flow-dev DevLoop 让外部模型执行 flow-code-review 流程）：
+    # 调用方 prompt 自带流程与输出契约，前言的"一行结论"框定会与之冲突。
+    if not args.deep and not args.no_preamble:
         prompt = LIGHT_PREAMBLE + prompt
 
     try:
@@ -717,6 +727,7 @@ def main():
         "caller_model": args.caller_model,
         "effort": args.effort,
         "mode": "deep" if args.deep else "light",
+        "no_preamble": args.no_preamble,
         "reviews": reviews,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -25,7 +25,9 @@
 
 ### light preamble（脚本默认注入）
 
-`run-external-review.py` 在 light 模式下会自动把以下前言拼接到调用方 prompt 之前（`--deep` 时不注入）。其他 agent 拟 prompt 时可参考这段措辞，让审查保持轻量：
+`run-external-review.py` 在 light 模式下会自动把以下前言拼接到调用方 prompt 之前（`--deep` 与 `--no-preamble` 时不注入）。其他 agent 拟 prompt 时可参考这段措辞，让审查保持轻量：
+
+`--no-preamble` 服务流程驱动审查：调用方 prompt 已完整定义审查流程与输出契约（如 flow-dev DevLoop 让外部模型按 flow-code-review 流程执行并输出 findings JSON），前言的「快速 sanity check / 一行结论」框定会与之冲突，故跳过注入；校验与模型选择仍按 light。
 
 ```text
 【审查模式：light 正交审查】

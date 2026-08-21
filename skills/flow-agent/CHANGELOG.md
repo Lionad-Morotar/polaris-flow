@@ -2,6 +2,10 @@
 
 格式基于 Keep a Changelog；级别约定：几乎始终 patch，minor/major 由维护者显式指定。
 
+## [0.1.0-alpha.1] - 2026-08-21
+
+- 新增 `--no-preamble`：跳过 light 前言注入，服务流程驱动审查（调用方 prompt 完整定义审查流程与输出契约，如 flow-dev DevLoop 让外部模型执行 flow-code-review 流程并输出 findings JSON）；校验仍按 light（非空即过）、kimi 视角不升级，返回 JSON 增加 `no_preamble` 字段
+
 ## [0.1.0-alpha.0] - 2026-08-17
 
 开源边界版本：历史迭代压缩重写，版本号与仓内技能 tag 格式（`<skill>@<version>`）对齐。
