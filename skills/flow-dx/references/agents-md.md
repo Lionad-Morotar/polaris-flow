@@ -43,9 +43,9 @@
      rg -n '(sk-[a-zA-Z0-9]{20,}|sk_live_[a-zA-Z0-9]+|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-[a-zA-Z0-9-]+|BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.)' .planning/codebase/
      ```
      命中则人工复核清除，确认非敏感再继续
-2. **产品上下文**：Skill 调用 `impeccable` 并传 `init`（仅 `PRODUCT.md` 缺失时）
-3. **Domain Docs 挂载**：执行 `setup-matt-pocock-skills`，仅保留 `Domain Docs` 部分与文档；**无需 `Issue tracker`、`Triage Labels` 的描述及 `docs/agents/xxx` 文档**
-4. **全库通读**：执行 `learn-codebase`
+2. **产品上下文**：Skill 调用 `impeccable` 并传 `init`（仅 `PRODUCT.md` 缺失时）。flow-dx 自动模式下无访谈机会时，按 impeccable 允许的"仅从仓库证据推断"路径执行，推断项在 PRODUCT.md 内显式标注
+3. **Domain Docs 挂载**：执行 `setup-matt-pocock-skills`，仅保留 `Domain Docs` 部分与文档；**无需 `Issue tracker`、`Triage Labels` 的描述及 `docs/agents/xxx` 文档**。正因不建 `docs/agents/domain.md`，其消费规则须**内联**进 A/C 的 `## Agent skills` 段——模板块里的 "See `docs/agents/domain.md`" 引用会成死链，禁止照抄
+4. **全库通读**：执行 `learn-codebase`。大库（数万行起）内联全读会淹没编排会话：按目录职责切 4-6 个分区并行派代理全读、摘要回流，主代理不重复读
 
 ### 3. 挂载文档引用（按入库策略分支）
 
