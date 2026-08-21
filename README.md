@@ -51,6 +51,7 @@ npx skills ls
 | 叫另一个模型来做正交审查 | `/flow-agent` |
 | 把设计稿还原成页面 | `/flow-ui-ralph` |
 | 让项目按节奏自动推进 | `/flow-polaris` |
+| 给项目发新版本 | `/flow-release` |
 | 生成、编辑图片，或转绘画提示词 | `/flow-image` |
 | 沉淀踩坑知识、查以前的解法 | `/flow-mem` |
 | 整理 git 提交、推送前质量门禁 | `/flow-git` |
@@ -63,6 +64,7 @@ npx skills ls
 
 - `/flow-dev {要求}`（稳定）— 开发主流程：需求拆解 → TDD Dev → Review → 验证，收尾维护记忆与文档
 - `/flow-polaris`（试验）— 北极星循环：在 production-ready 项目上配置 cadence，自动驱动「目标分解 → slice 产出 → 合并累积 → 验收发版」
+- `/flow-release [--changelog-only|--sync-to <branch>]` — 项目版本发布流程：Preflight 机械检查、分支模型分流、monorepo 发版变更矩阵、Changelog 与 bump、Git tag，按发布目标（npm / VSCode 扩展 / Claude skill / CC 插件）分流首发准备
 - `/flow-ui-ralph {要求}`（试验）— UI 还原迭代：视觉分析 + 浏览器验证，还原度收敛至 99%+；无设计稿时先生成设计再还原
 - `/flow-code-review {要求}` — 基于 CC CodeReview 按 effort 档位对 diff 做多角度审查（finder → dedup/verify → sweep）
 - `/flow-agent <target> --task "<模型与内容描述>"` — 外部正交审查：按 effort 启动一个或多个异模型做快速外部检查（启动器链为本机配置）
