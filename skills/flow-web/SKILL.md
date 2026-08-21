@@ -17,6 +17,8 @@ metadata:
 
 ## 网站参考
 
+* [ai.example-corp.com](references/ai.example-corp.com/agent-create-tour.md) — 本地 dev 站（localhost:1886）验收智能体导游模式创建链路：引导发起、高亮/气泡断言、点击回执闭环、落库验证；含 reka-ui Select 合成点击、vite checker 遮罩拦截、UModal 关闭残留等坑
+* [ai.example-corp.com](references/ai.example-corp.com/chat-chart-testing.md) — 本地 dev 站聊天页 genui 图表生成验证：发消息/发送按钮、图表渲染断言（svg 0x0 诊断）、Vue 组件降级抓错、CDP console 捕获、元素截图黑背景等坑
 * [anthropic.com](references/anthropic.com/read-engineering-blog.md) — 读取 Anthropic Engineering 博客文章
 * [bing.com](references/bing.com/search-and-extract.md) — 提取 Bing 搜索结果
 * [code.claude.com](references/code.claude.com/read-doc-page.md) — 读取 Claude Code 官方文档页
@@ -46,11 +48,11 @@ metadata:
 - 截图元素 — `bash ~/.claude/skills/kimi-webbridge/scripts/screenshot.sh -e "#selector"`：仅捕获指定元素
 - 提取正文为 Markdown — `bash ~/.claude/skills/kimi-webbridge/scripts/extract-text.sh`：保存到 `/tmp/kimi-webbridge-texts/`
 - 批量开 tab — `bash ~/.claude/skills/kimi-webbridge/scripts/batch-navigate.sh url1 url2`：顺序打开并等待加载
-- 页面快照 — `snapshot`：返回带 `@e` ref 的 a11y 树
+- 页面快照 — `snapshot`：返回带 `@e` ref 的 a11y 树（Nuxt UI SPA 可能只回空树，见常见错误）
 - 点击 — `click` (by @e ref 或 CSS)：优先用 snapshot 获取的 ref
 - 填写 — `fill`：触发 React onChange，适合表单
 - 输入 — `type`：逐字符输入，适合搜索框实时过滤
-- 执行 JS — `evaluate`：返回值用 IIFE 包裹
+- 执行 JS — `evaluate`：返回值用 IIFE 包裹；body 三层结构 `{"action":"evaluate","args":{"code":"..."},"session":"..."}`，参数名是 `code`（非 expression）
 - 打开 URL（推荐） — `bash ~/.claude/skills/flow-web/scripts/open-tab.sh --url <url> --session <name>`：默认按 cwd 绑定自动选择 workspace；需要新窗口时加 `--new-window`。注意：`--workspace` 走 AppleScript 会抢一次 macOS 焦点，落点准确；不指定 workspace 时走 webbridge 后台开 tab，不抢焦点但落点在当前窗口
 - 页面内导航 — `navigate` / `find_tab`：在已接管的 tab 内跳转或重新查找；`newTab:true` 首次调用
 - 开 tab 到工作区/新窗口 — `bash ~/.claude/skills/flow-web/scripts/open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--current-window] [--restore]`：默认按 cwd 绑定自动选择 workspace；`--workspace` 显式指定；`--current-window` 强制当前窗口；`--new-window` 新建窗口；默认不抢焦点
@@ -136,6 +138,13 @@ open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--
 - React 按钮脚本 `.click()` 无反应 — React 合成事件过滤非 trusted 事件：改用 webbridge `click` action（CDP 真实事件），配 snapshot ref 或临时挂 id 的 CSS；`click` success 只代表派发成功，需对比前后状态验证生效
 - 表单填写后确认按钮仍 disabled — React 未检测到值变化：用 `fill` 而非 JS setter
 - 搜索框输入后无结果 — 未触发真实 input 事件：用 `type` 逐字符输入
+- `fill` 对 Vue/Nuxt textarea 报 "Uncaught" — 改用 evaluate 原生 value setter + 派发 `input`/`change` 事件；Vue 重渲染会让旧 DOM 引用失效，改完重新 `querySelector` 再读值
+- reka-ui / Nuxt UI v4 Select 选项合成 `.click()` 无效 — reka-ui 监听 pointerdown 且校验 isPrimary，需 pointerdown+pointerup+click 完整序列；UI 显示选中 ≠ v-model 写回，以表单提交/校验结果为准
+- CDP click 返回 success 但目标无反应 — 先 `elementFromPoint` 查命中链：dev 场景 vite-plugin-checker 编译错误遮罩（`VITE-PLUGIN-CHECKER-ERROR-OVERLAY` custom element，aria-hidden 仍拦截指针）会盖住页面，`querySelector('VITE-PLUGIN-CHECKER-ERROR-OVERLAY').style.display='none'` 或刷新等编译恢复
+- 弹窗/Modal 关闭动画期间 DOM 残留 — `getBoundingClientRect` 判「是否关闭」不可靠（过渡中仍>0），查组件实例 `el.__vueParentComponent.setupState.open` 或 sleep 2-3s 再查
+- `/command` 报 `action is required` / `code is required` — body 用三层结构 `{"action":"<工具>","args":{...},"session":"..."}`，evaluate 参数名是 `code` 不是 expression
+- Vue/Nuxt 发送按钮 JS `.click()` 无反应 — 消息留在输入框：evaluate 打标记后 CDP click（真实事件）；成功判据是输入框 value 清空而非按钮状态
+- snapshot 返回空 a11y 树（Nuxt UI SPA 常见，只有 Notifications/空 list）— 改用 evaluate 直查 DOM（querySelector + innerText 定位元素）
 - eval 返回 `Exit 1` — 使用了 let/箭头函数：改用 var + function()
 - 截图后仍显示"失败" — 后端未编译/未重启：`go build` 或确认 air 已重载
 - 截图中看不到完整列表 — viewport 不够高：滚动后再截
