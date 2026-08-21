@@ -74,7 +74,7 @@ export function runPrePush({ stdinText, repoDir, gitleaksBin = "gitleaks" }) {
   const { path: configPath, cleanup } = resolveConfigPath(repoDir);
   try {
     for (const update of updates) {
-      const opts = logOptsForUpdate(update);
+      const opts = logOptsForUpdate(repoDir, update);
       if (opts === null) {
         skipped.push(update.localRef);
         continue;
