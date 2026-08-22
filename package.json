@@ -6,6 +6,7 @@
     "test": "node skills/flow-skill/scripts/lint.mjs skills",
     "test:pre-push": "node --test scripts/pre-push/*.test.mjs",
     "setup:hooks": "git config core.hooksPath .githooks",
-    "bump": "node skills/flow-skill/scripts/bump.mjs"
+    "bump": "node skills/flow-skill/scripts/bump.mjs",
+    "test:flow-code": "node --test skills/flow-code/scripts/*.test.mjs"
   }
 }
