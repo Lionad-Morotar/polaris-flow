@@ -179,7 +179,7 @@ runner 内置 launcher 级熔断器（`scripts/circuit_breaker.py`），状态�
 行为语义：
 
 - **OPEN（熔断）**：熔断期内 runner 对该 launcher 零请求（probe 也不发），日志记 `[skip]`，直接顺延备用 launcher；一族全部熔断时该模型 `degraded` 且 error 注明。
-- **冷却期取值**：限流信号（`429`/`使用上限`/`rate limit`/`quota` 等）立即熔断，优先解析限流消息自带的服务端恢复时间（+120s buffer）；解析不到按 2min/1h/4h/7d/24d 五档累进（连续失败逐级加深，成功复位清零）。升至 7d/24d 档时 osascript 通知人工介入（headless 失败静默）。
+- **冷却期取值**：限流信号（`429`/`使用上限`/`rate limit`/`quota`/`concurrent request limit` 等）立即熔断——含 403 形态的并发上限（Kimi），靠 `concurrent…limit` 特征词识别而非裸 403（403 也常意味凭证失效）；优先解析限流消息自带的服务端恢复时间（+120s buffer）；解析不到按 2min/1h/4h/7d/24d 五档累进（连续失败逐级加深，成功复位清零）。升至 7d/24d 档时 osascript 通知人工介入（headless 失败静默）。
 - **HALF-OPEN（恢复试探）**：冷却到期后首个到达的会话经 flock 内 CAS 获得试探权（10min 未落地视为死亡可回收，其余会话继续跳过），probe 成功即复位，失败按上述规则再熔断。
 - **超时豁免**：审查慢导致的超时不计入熔断（慢≠链路故障，实证存在 1700s+ 健康审查）。
 - **fail-open 容错**：状态文件损坏（文件级/字段级）与熔断器自身异常都不阻断审查——净化损坏条目、集成点兜底放行，熔断器是保障层不是故障源。

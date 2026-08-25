@@ -2,6 +2,10 @@
 
 格式基于 Keep a Changelog；级别约定：几乎始终 patch，minor/major 由维护者显式指定。
 
+## [Unreleased]
+
+- 熔断器限流识别纳入并发上限：Kimi 的 403 形态（「You've reached your concurrent request limit」）靠 `concurrent…limit` 特征词纳入 `RATE_LIMIT_RE`（不用裸 403，避免把凭证失效误当限流）；无恢复时间可解析，按既有五档累进首档 2min 熔断
+
 ## [0.1.0-alpha.2] - 2026-08-25
 
 - 跨会话 launcher 熔断器：限流/故障状态落 `~/.flow-dev/circuit-breaker.json` 跨会话共享，熔断期 runner 对该 launcher 零请求（含 probe）；冷却期优先取限流消息自带的服务端恢复时间（+120s buffer），取不到按 2min/1h/4h/7d/24d 五档累进；升至 7d/24d 档时 osascript 非阻塞通知

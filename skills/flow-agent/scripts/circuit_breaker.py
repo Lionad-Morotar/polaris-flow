@@ -41,8 +41,12 @@ SERVER_RESET_BUFFER_S = 120
 # half-open 试探权占用上限：probe 硬上限 20s，10min 已覆盖极端慢链路
 HALF_OPEN_TTL_S = 600
 
+# 并发上限走 403 而非 429（Kimi 实证形态：「You've reached your concurrent
+# request limit」），靠 concurrent…limit 特征词识别而非裸 403——403 也常意味着
+# 凭证失效，误纳会让凭证类故障被当成限流熔断。
 RATE_LIMIT_RE = re.compile(
-    r"429|rate[\s_-]?limit|too many requests|使用上限|限额|quota|usage[\s_-]?limit",
+    r"429|rate[\s_-]?limit|too many requests|使用上限|限额|quota|usage[\s_-]?limit"
+    r"|concurrent[\s_-]?(?:request[\s_-]?)?limit",
     re.IGNORECASE,
 )
 # 限流消息自带的恢复时间（实证形态：「您的限额将在 2026-08-25 18:42」），本地时区解释

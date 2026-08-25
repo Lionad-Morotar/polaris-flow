@@ -24,6 +24,13 @@ GLM_RATE_LIMIT_OUTPUT = (
 
 T0 = 1782800000.0  # 任意固定基准时间
 
+# 2026-08-26 实证 Kimi 并发上限样本：403 状态码但属限流语义，无恢复时间；
+# 「Please run /login」是 CC 对 403 的通用登录提示噪音，不是凭证失效
+KIMI_CONCURRENT_LIMIT_OUTPUT = (
+    "Please run /login · API Error: 403 You've reached your concurrent request limit. "
+    "Please wait for your ongoing requests to finish and try again."
+)
+
 
 class BreakerTestCase(unittest.TestCase):
     def setUp(self):
@@ -111,6 +118,13 @@ class TestRateLimitFastPath(BreakerTestCase):
 
     def test_rate_limit_without_parseable_time_falls_back_to_escalation(self):
         self.breaker.record_failure("cgwz", "HTTP 429 Too Many Requests", slug="s1")
+        entry = self.breaker.status()["launchers"]["cgwz"]
+        self.assertEqual(entry["cooldown_source"], "escalation")
+        self.assertAlmostEqual(entry["cooldown_until"] - self.now, 120, delta=1)
+
+    def test_kimi_concurrent_limit_counts_as_rate_limit(self):
+        """Kimi 403 并发上限：识别为限流信号，无恢复时间可解析走累进首档。"""
+        self.breaker.record_failure("cgwz", KIMI_CONCURRENT_LIMIT_OUTPUT, slug="s1")
         entry = self.breaker.status()["launchers"]["cgwz"]
         self.assertEqual(entry["cooldown_source"], "escalation")
         self.assertAlmostEqual(entry["cooldown_until"] - self.now, 120, delta=1)
