@@ -261,7 +261,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
          --no-preamble \
          --timeout 1800
        ```
-       `--no-preamble` 必传——light 前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程及 findings JSON 契约冲突
+       `--no-preamble` 必传——light 前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程及 findings JSON 契约冲突。注意两层 effort 勿混：runner `--effort`（normal|max|ultra|fable，选模型集合）恒 normal 不随 mode 漂移；flow-code-review 档位（low|medium，审查强度）只进 prompt 语义与本地降级调用——把档位值传进 runner 会 exit 2（invalid choice）
    - [ ] **DevLoop 审查·本地执行（降级路径）**（仅 `--mode fix` 或 `--skip-review` 传入时执行；外部执行运行时失败由 Step 6 回溯降级到本分支）：内联模式加载 flow-code-review 技能（`~/.claude/skills/flow-code-review/SKILL.md`），以 `--json --effort <档位> --base <base_ref>` 调用；**若 `--delegate`** 按 `references/delegation.md` 审查模板分派审查子代理（`--effort` 同档位，`--base` 必传该 Slice 的 `base_ref`），子代理最终文本即 findings JSON
    - [ ] review effort 按运行模式选择（详见 `references/quality-gates.md`）：
      - [ ] `--mode light`（默认）/ `--mode quick` / `--mode dev` / `--mode fix` → `low`
