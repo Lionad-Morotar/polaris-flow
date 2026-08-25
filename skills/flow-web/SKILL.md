@@ -145,7 +145,10 @@ open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--
 ### 其他提示
 
 * 元素查找必须过滤可见性（`getBoundingClientRect` 宽高大于 0）
-* `evaluate` 表达式用 IIFE 包裹，复杂逻辑回退到 ES5（`var` + `function`）
+* `evaluate` 表达式用 IIFE 包裹，复杂逻辑回退到 ES5（`var` + `function`）——evaluate 共享页面全局词法环境，顶层 `const`/`let` 二次注入即重复声明 SyntaxError；注入脚本资源（如页内采样器）用命名函数表达式形态 `'(' + src + ')(args)'`
+* 几何/截图类采集前必须 `open-tab.sh ... --restore` 把 tab 置前台：后台 tab `document.visibilityState === 'hidden'` 时渲染管道不产出 layout，`getBoundingClientRect` 全零——采集脚本应显式检测 hidden 并报错，比产出全零假数据安全
+* 同 URL `navigate` 会被 SPA 软导航吞掉（页面不重载）：强制全新导航拼 cache-busting query（如 `?__t=<ts>`）
+* `open-tab.sh` 报 `workspace not found` — workspace 绑定丢失（浏览器重启/窗口关闭）：先跑 `ensure-webbridge.sh` 重绑再重试
 * 后端改动后强制刷新（`location.reload(true)`）并截图验证
 * 配置类操作一律走 UI，不走 API
 * 表单填写用 `fill`，搜索框实时过滤用 `type`
