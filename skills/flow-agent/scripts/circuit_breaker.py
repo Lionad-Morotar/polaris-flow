@@ -233,6 +233,27 @@ class CircuitBreaker:
 
         self._transact(fn)
 
+    def trip(self, launcher: str, reason: str = "manual trip", cooldown_s: float = 24 * 3600) -> dict:
+        """手动熔断：服务「线下已知账号数小时不可用」（维护期/充值前）——直接构造
+        manual 条目，不走 record_failure 的自动累进：默认 24h 冷却而非 2min 首档
+        （短冷却会让并行会话立即穿透试探，手动熔断形同虚设）；不消耗累进档、
+        不触发升档通知（用户自己操作，无需被通知）。恢复用 reset 解锁。"""
+
+        def fn(state):
+            now = self._now()
+            entry = _fresh_entry()
+            entry.update(
+                opened_at=now,
+                cooldown_until=now + cooldown_s,
+                cooldown_source="manual",
+                last_error=reason[:MAX_ERROR_KEEP],
+                last_slug="manual",
+            )
+            state["launchers"][launcher] = entry
+            return entry, True
+
+        return self._transact(fn)
+
     def _read_state(self) -> dict:
         """读状态文件；缺失/损坏视为空状态——熔断器是保障层，自身故障不该阻断审查。
         容错覆盖两层：文件级（JSON 非法）与字段级（entry 类型非法，如手工编辑把
@@ -277,3 +298,83 @@ class CircuitBreaker:
             self._notifier(launcher, level, until)
         except Exception:
             pass
+
+
+def _format_entry_line(launcher: str, entry: dict, now: float) -> str:
+    """status 的人类可读行：恢复时间与剩余时长是用户最关心的字段，前置。"""
+    until = entry["cooldown_until"]
+    if now < until:
+        timing = f"预计 {_fmt_ts(until)} 恢复（剩余 {_fmt_duration(until - now)}）"
+    else:
+        timing = f"已过恢复时间 {_fmt_ts(until)}，等待下次试探"
+    source = entry.get("cooldown_source", "escalation")
+    level = entry.get("escalation_level", -1)
+    level_label = ESCALATION_LABELS[level] if 0 <= level < len(ESCALATION_LABELS) else "-"
+    bits = [f"source={source}", f"档={level_label}"]
+    if entry.get("last_slug"):
+        bits.append(f"last={entry['last_slug']}")
+    ho = entry.get("half_open")
+    if ho:
+        bits.append(f"试探中(by {ho.get('by', '?')})")
+    return f"{launcher}  {timing}  {'  '.join(bits)}"
+
+
+def main(argv: list[str] | None = None) -> int:
+    """熔断器手动管理入口：status 查看 / reset 复位 / trip 手动熔断。
+
+    trip 的存在理由：用户线下已知某账号不可用（充值前、维护期）时手动熔断，
+    免去每个并行会话各自拿一次真实失败才发现——与自动熔断共用同一状态面。
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="flow-agent 跨会话熔断器手动管理")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_status = sub.add_parser("status", help="查看熔断状态")
+    p_status.add_argument("--json", action="store_true", help="机器可读输出")
+
+    p_reset = sub.add_parser("reset", help="复位（恢复可用）")
+    p_reset.add_argument("launcher", nargs="?", default=None, help="要复位的 launcher")
+    p_reset.add_argument("--all", action="store_true", help="复位全部")
+
+    p_trip = sub.add_parser("trip", help="手动熔断一个 launcher（默认冷却 24h）")
+    p_trip.add_argument("launcher")
+    p_trip.add_argument("reason", nargs="?", default="manual trip", help="熔断原因（记录用）")
+    p_trip.add_argument("--for", dest="hours", type=float, default=24.0, help="冷却时长（小时，默认 24）")
+
+    args = parser.parse_args(argv)
+    breaker = CircuitBreaker()
+
+    if args.command == "status":
+        state = breaker.status()
+        if args.json:
+            print(json.dumps(state, ensure_ascii=False, indent=2))
+            return 0
+        launchers = state["launchers"]
+        if not launchers:
+            print("无熔断记录")
+            return 0
+        now = time.time()
+        for name, entry in sorted(launchers.items()):
+            print(_format_entry_line(name, entry, now))
+        return 0
+
+    if args.command == "reset":
+        if args.all:
+            breaker.reset(None)
+            print("已复位全部熔断记录")
+            return 0
+        if not args.launcher:
+            parser.error("reset 需要指定 launcher 或 --all")
+        breaker.reset(args.launcher)
+        print(f"已复位: {args.launcher}")
+        return 0
+
+    if args.command == "trip":
+        entry = breaker.trip(args.launcher, args.reason, cooldown_s=args.hours * 3600)
+        print(_format_entry_line(args.launcher, entry, time.time()))
+        return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

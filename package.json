@@ -7,6 +7,7 @@
     "test:pre-push": "node --test scripts/pre-push/*.test.mjs",
     "setup:hooks": "git config core.hooksPath .githooks",
     "bump": "node skills/flow-skill/scripts/bump.mjs",
-    "test:flow-code": "node --test skills/flow-code/scripts/*.test.mjs"
+    "test:flow-code": "node --test skills/flow-code/scripts/*.test.mjs",
+    "test:flow-agent": "python3 -m unittest discover -s skills/flow-agent/tests && node --test skills/flow-agent/scripts/*.test.mjs"
   }
 }
