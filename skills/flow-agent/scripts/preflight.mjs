@@ -18,6 +18,7 @@
 
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -67,6 +68,36 @@ function loadLauncherFamilies() {
 }
 
 const LAUNCHER_FAMILIES = loadLauncherFamilies();
+
+// 跨会话熔断状态（circuit_breaker.py 写入，tmp+rename 原子替换，只读方无需加锁）。
+// 语义与 python 侧对齐：OPEN 且 cooldown_until 未到期才视为熔断——到期即「可试探」，
+// 试探互斥由 runner 的 half-open CAS 负责，preflight 只反映「当前明确不可用」。
+const BREAKER_STATE_PATH =
+  process.env.FLOW_CIRCUIT_BREAKER_PATH || path.join(os.homedir(), ".flow-dev", "circuit-breaker.json");
+
+function loadOpenCircuits() {
+  try {
+    const data = JSON.parse(readFileSync(BREAKER_STATE_PATH, "utf-8"));
+    const launchers = data?.launchers;
+    if (!launchers || typeof launchers !== "object") return new Map();
+    const now = Date.now() / 1000;
+    const open = new Map();
+    for (const [name, entry] of Object.entries(launchers)) {
+      // 字段级容错同 python 侧：类型非法的条目丢弃（fail-open），不阻断 preflight
+      if (entry && typeof entry === "object" && typeof entry.cooldown_until === "number" && now < entry.cooldown_until) {
+        open.set(name, {
+          cooldown_until: entry.cooldown_until,
+          source: typeof entry.cooldown_source === "string" ? entry.cooldown_source : "escalation",
+        });
+      }
+    }
+    return open;
+  } catch {
+    return new Map(); // 缺失/损坏视为空状态：熔断器是保障层，自身故障不阻断自检
+  }
+}
+
+const OPEN_CIRCUITS = loadOpenCircuits();
 
 const result = { ok: true, skill_version: readSkillVersion(), families: {}, versions: {}, errors: [] };
 
@@ -119,14 +150,21 @@ if (!probe) {
       .map(([name, flag]) => [name, flag === "1"]),
   );
   for (const [model, launchers] of Object.entries(LAUNCHER_FAMILIES)) {
-    const active = launchers.find((l) => avail.get(l) === true) ?? null;
+    // 熔断未到期的不担任 active（跨会话共享状态：某会话探明限流后，其余会话不再重复探测）
+    const circuit = launchers
+      .filter((l) => OPEN_CIRCUITS.has(l))
+      .map((l) => ({ launcher: l, ...OPEN_CIRCUITS.get(l) }));
+    const usable = launchers.filter((l) => !OPEN_CIRCUITS.has(l));
+    const active = usable.find((l) => avail.get(l) === true) ?? null;
     result.families[model] = {
       ok: active !== null,
       active,
       unavailable: launchers.filter((l) => avail.get(l) !== true),
+      circuit,
     };
     if (!active) {
-      fail(`启动器全族不可用: ${model}（${launchers.join(" / ")}）`);
+      const tripped = circuit.length > 0 && usable.length === 0 ? `（${circuit.length} 个熔断中）` : "";
+      fail(`启动器全族不可用: ${model}（${launchers.join(" / ")}）${tripped}`);
     }
   }
 }
