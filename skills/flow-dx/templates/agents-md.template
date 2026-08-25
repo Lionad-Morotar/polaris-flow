@@ -35,6 +35,7 @@
   | [CONVENTIONS.md](./.planning/codebase/CONVENTIONS.md)   | 代码风格、开发约定         |
   | [TESTING.md](./.planning/codebase/TESTING.md)           | 测试规范                   |
   | [INTEGRATIONS.md](./.planning/codebase/INTEGRATIONS.md) | 外部服务、环境变量         |
+  | [IDENTITY.md](./.planning/codebase/IDENTITY.md)         | 身份与授权、角色权限模型   |
   | [CONCERNS.md](./.planning/codebase/CONCERNS.md)         | 技术债务、注意事项         |
 
   ▶ 产品上下文片段（<repo-root>/PRODUCT.md 存在时使用）：

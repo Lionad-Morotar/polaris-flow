@@ -54,6 +54,7 @@
 - [ ] `gsdDocs.ignored=false`（`.planning/` 将入库）→ 挂团队共享的 `CLAUDE.md`（A/C 若为"真实文件 + symlink"组合，改真实文件即可，链接自动跟随）。同事 clone 后有 `.planning/`，链接可达
 - [ ] `gsdDocs.ignored=true`（`.planning/` 不入库）→ 挂个人本地 `CLAUDE.local.md`（CC 官方本地 memory 层，与 CLAUDE.md 一同加载）。**切勿挂 CLAUDE.md**——否则同事 clone 后看到死链。`CLAUDE.local.md` 不存在则创建（通常已被全局 `*.local.*` 或项目 ignore 覆盖，无需手动加 ignore）
 - [ ] 用模板文件尾的可选表行片段补全表格，仅添加真实存在的文档行，禁止虚空引用
+- [ ] 索引完整性对账：以盘点 `gsdDocs.files` 为准，确保 `.planning/codebase/` 下**每个在盘文档**都有对应表行——`gsdDocs.unindexed` 非空即有文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），逐行补登。已知文档的描述行优先复用模板文件尾片段；模板未收录的新文档按既有表格风格补一行，并把该文档回流进模板片段供后续项目复用
 
 ### 4. 提交
 

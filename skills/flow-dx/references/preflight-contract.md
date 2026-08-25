@@ -42,7 +42,7 @@ node preflight.mjs --skip devHub <目标目录>
     "linkTarget": null,
     "gitTracked": false
   },
-  "gsdDocs": { "exists": true, "dir": "<abs path>", "files": ["STACK.md"], "ignored": false },
+  "gsdDocs": { "exists": true, "dir": "<abs path>", "files": ["STACK.md"], "ignored": false, "unindexed": [] },
   "productMd": { "exists": false, "path": "<abs path>" },
   "gitignoreDocsAgents": { "docsIgnored": false, "agentsSafe": true },
   "devHub": {
@@ -108,6 +108,7 @@ Agents.md 切片：
 * `claudeLocalMd`：CC 官方本地 memory 层（项目根 `CLAUDE.local.md`，与 CLAUDE.md 一同加载，个人不入库）。`gsdDocs.ignored=true` 时，文档引用应挂这里而非 CLAUDE.md，避免团队共享文件出现死链
 * `gsdDocs.exists` 仅在 `.planning/codebase/` 内有 ≥1 个 `.md` 时为 true
 * `gsdDocs.ignored`：`git check-ignore` 实测 `.planning/codebase/STACK.md` 是否被项目或全局 ignore 命中。**不预设入库策略**——消费方（agents-md.md）据此选择挂载目标：`ignored=true` → `CLAUDE.local.md`（本地）；`ignored=false` → `CLAUDE.md`（团队共享）。check-ignore 只匹配规则不要求文件存在，盘点期即可判定
+* `gsdDocs.unindexed`：`.planning/codebase/` 下实际存在、却未被挂载索引（`ignored=false` → `CLAUDE.md`，否则 `CLAUDE.local.md`）以 `.planning/codebase/<name>.md` 形式引用的文档清单。非空即**索引漂移**——文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），Agents.md 切片 Step 3 应逐行补登。目录为空或无索引文件时为 `[]`
 * `gitignoreDocsAgents.agentsSafe` 为 false 表示 `docs/agents/domain.md` 被 .gitignore 忽略（常见于项目把 `docs/` 整目录排除，如 flow-dev 运行文档策略），需在提交前把 `docs/` 改写为 `docs/*` 并追加 `!docs/agents/` 例外；`docsIgnored` 为诊断字段，指示 `docs/` 自身是否被规则匹配。git check-ignore 只匹配规则不要求文件存在，盘点期即可判定，把入库隐患前置到范围确认阶段
 * `skills.*.available` 覆盖 `~/.claude/skills` 与插件 marketplaces/cache 两处来源。**技能可用性以此字段为唯一判定依据**：`available=false` 的增强项从范围确认（Q2）选项中剔除，消费方不得再 Read 技能文件做存在性确认——探测已由脚本一次完成，重复探测纯耗上下文
 

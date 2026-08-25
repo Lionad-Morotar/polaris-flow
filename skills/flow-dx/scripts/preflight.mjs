@@ -233,7 +233,22 @@ result.gsdDocs = {
   dir: gsdDir,
   files: gsdFiles,
   ignored: gsdIgnored,
+  unindexed: [], // 见下方漂移检测：在盘但未进挂载索引的文档
 };
+
+// 索引漂移检测：.planning/codebase/ 下实际存在、却没被挂载索引以 `.planning/codebase/<name>.md`
+// 形式引用的文档。防手工补登的文档与索引脱节（本项目 TESTING.md/IDENTITY.md 曾因此在盘
+// 未进 CLAUDE.md 清单、索引计数过期）。挂载目标与 agents-md.md Step 3 同一规则：
+// ignored=false → CLAUDE.md（团队共享），ignored=true → CLAUDE.local.md（个人本地）。
+// readFileSync 跟随 symlink，A/C 谁是真实文件都能读到索引内容；无索引文件时无从漂移，留 []。
+const gsdMountProbe = gsdIgnored ? result.claudeLocalMd : result.claudeMd;
+if (gsdFiles.length > 0 && gsdMountProbe?.exists && gsdMountProbe.path) {
+  const indexText = readFileSync(gsdMountProbe.path, "utf-8");
+  const referenced = new Set(
+    [...indexText.matchAll(/\.planning\/codebase\/([A-Za-z0-9-]+\.md)/g)].map((m) => m[1]),
+  );
+  result.gsdDocs.unindexed = gsdFiles.filter((f) => !referenced.has(f));
+}
 
 // 产品上下文：impeccable（init 命令）仅在缺失时才应列为可选项
 const productPath = path.join(repoRoot, "PRODUCT.md");

@@ -109,7 +109,7 @@ skill 目录 `templates/` 下提供以下参考模板：dev 模板供 `flow-dev`
    - [ ] 运行 `node ~/.claude/skills/flow-dx/scripts/preflight.mjs`，解析 stdout JSON（契约见 `references/preflight-contract.md`）。支持 `--skip devHub,lintInfra` 主动跳过切片——被跳过的写入 `skipped` 数组、`ready` 收敛为 `'skip'`（三态），下游不作为缺口
    - [ ] 若返回 `error` 字段（目标不在 git 仓库内）：向用户报告并终止——产物必须进 git，无仓库不执行
    - [ ] 得出缺口清单：
-     * Agents.md 切片缺口：`agentsMd`/`claudeMd` 缺失或互链不正确、`gsdDocs.exists` 为 false、`productMd.exists` 为 false、`gitignoreDocsAgents.agentsSafe` 为 false（`docs/agents/` 被 .gitignore 忽略，需补例外）
+     * Agents.md 切片缺口：`agentsMd`/`claudeMd` 缺失或互链不正确、`gsdDocs.exists` 为 false、`productMd.exists` 为 false、`gitignoreDocsAgents.agentsSafe` 为 false（`docs/agents/` 被 .gitignore 忽略，需补例外）、`gsdDocs.unindexed` 非空（`.planning/codebase/` 有文档在盘但未进索引）
      * 增强项可用性：`skills.<name>.available` 为 true 才可列为 Q2 候选，false 直接剔除——此字段是可用性唯一判定依据，不得另行探测
      * Dev Hub 切片缺口：`devHub.applicable` 为 true 且 `devHub.ready` 为 false（根与 workspace 子包均无 Nuxt 站点包时自动不适用）
      * Lint 基建切片缺口：`lintInfra.applicable` 为 true 且 `lintInfra.ready` 为 false（无 Tailwind + flat config 自动不适用）
@@ -144,7 +144,7 @@ skill 目录 `templates/` 下提供以下参考模板：dev 模板供 `flow-dev`
    - [ ] 多站点包（`sitePkgs` 长度 > 1）时先与用户确认部署目标，不默认取首个
 
 6. 验证（preflight 重跑作裁判）
-   - [ ] 重跑 `preflight.mjs`（带本次 `--skip` 列表以复现 skip 态）：执行过的切片对应字段应收敛为就绪——`ready` 为 `true`（就绪）或 `'skip'`（主动跳过，不要求收敛）均算通过；`false` 才是未收敛（A/C 互链正确、`gsdDocs`/`productMd` 就绪、`gitignoreDocsAgents.agentsSafe` 为 true）。未收敛说明执行有漏，修复后再判
+   - [ ] 重跑 `preflight.mjs`（带本次 `--skip` 列表以复现 skip 态）：执行过的切片对应字段应收敛为就绪——`ready` 为 `true`（就绪）或 `'skip'`（主动跳过，不要求收敛）均算通过；`false` 才是未收敛（A/C 互链正确、`gsdDocs` 就绪且 `unindexed` 为空、`productMd` 就绪、`gitignoreDocsAgents.agentsSafe` 为 true）。未收敛说明执行有漏，修复后再判
    - [ ] Dev Hub 切片后补充运行时验证：`nuxt dev` 访问 `/dev` 看到动态列表；生产 build 后产物无 `/dev` 路由
    - [ ] Lint 基建切片后补充运行时验证：全量 `eslint . --fix` 不炸（ESLint 10 级联查找无 `ERR_MODULE_NOT_FOUND`），`better-tailwindcss/*` 命中收敛到 0 或仅剩人工决策项
    - [ ] Pages 部署切片后补充运行时验证：部署 workflow 首轮运行绿；线上 `https://<owner>.github.io/<repo>/` 首页与深链接 curl 200
