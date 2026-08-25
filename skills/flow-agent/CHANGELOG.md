@@ -2,6 +2,13 @@
 
 格式基于 Keep a Changelog；级别约定：几乎始终 patch，minor/major 由维护者显式指定。
 
+## [0.1.0-alpha.2] - 2026-08-25
+
+- 跨会话 launcher 熔断器：限流/故障状态落 `~/.flow-dev/circuit-breaker.json` 跨会话共享，熔断期 runner 对该 launcher 零请求（含 probe）；冷却期优先取限流消息自带的服务端恢复时间（+120s buffer），取不到按 2min/1h/4h/7d/24d 五档累进；升至 7d/24d 档时 osascript 非阻塞通知
+- 半开恢复：冷却到期首个会话 flock 内 CAS 获得试探权（10min 未落地回收），probe 成功复位、失败按累进再熔断
+- preflight 纳入熔断状态：OPEN 未到期 launcher 不担任族 active，families 输出增 circuit 字段；runner 集成点 fail-open 兜底与字段级损坏净化，probe 超时保留部分输出供限流识别
+- 管理 CLI：`python3 scripts/circuit_breaker.py status [--json] / reset <launcher|--all> / trip <launcher>`；python unittest + node --test 双套件，npm script `test:flow-agent`
+
 ## [0.1.0-alpha.1] - 2026-08-21
 
 - 新增 `--no-preamble`：跳过 light 前言注入，服务流程驱动审查（调用方 prompt 完整定义审查流程与输出契约，如 flow-dev DevLoop 让外部模型执行 flow-code-review 流程并输出 findings JSON）；校验仍按 light（非空即过）、kimi 视角不升级，返回 JSON 增加 `no_preamble` 字段

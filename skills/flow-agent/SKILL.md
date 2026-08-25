@@ -3,7 +3,7 @@ name: flow-agent
 description: 主动发起外部正交审查：调用者描述自己用什么模型做了什么，flow-agent 从正交视角启动一个或多个模型的快速外部检查
 argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--deep] [--no-preamble] [--timeout <seconds>] [--output-dir <dir>]
 metadata:
-  version: 0.1.0-alpha.1
+  version: 0.1.0-alpha.2
 ---
 
 ## 概念澄清
@@ -171,6 +171,29 @@ python3 skills/flow-agent/scripts/run-external-review.py \
 维护工具：`scripts/swap-launcher.mjs <A> <B> [--dry]` 原子交换同族两个启动器在 `configs/launchers.json` 中的优先级顺序——启动器链唯一事实源是该配置文件（本机私有，不入库），数组顺序即降级优先级，交换即全技能生效；A/B 须同族（guard 以同一模型的 launchers 数组同现为准）。
 
 实现侧可在此基础上扩展（例如并发、更复杂的 prompt 注入、resume 清理等），但应保持 "通过 zsh launcher function 启动" 这一核心抽象。
+
+## 跨会话熔断（circuit breaker）
+
+runner 内置 launcher 级熔断器（`scripts/circuit_breaker.py`），状态落 `~/.flow-dev/circuit-breaker.json` 跨会话共享。解决场景：某账号限流（如 5 小时窗口）后，并行运行的多个 flow-dev 会话不再各自重复 probe 已限流的 launcher。
+
+行为语义：
+
+- **OPEN（熔断）**：熔断期内 runner 对该 launcher 零请求（probe 也不发），日志记 `[skip]`，直接顺延备用 launcher；一族全部熔断时该模型 `degraded` 且 error 注明。
+- **冷却期取值**：限流信号（`429`/`使用上限`/`rate limit`/`quota` 等）立即熔断，优先解析限流消息自带的服务端恢复时间（+120s buffer）；解析不到按 2min/1h/4h/7d/24d 五档累进（连续失败逐级加深，成功复位清零）。升至 7d/24d 档时 osascript 通知人工介入（headless 失败静默）。
+- **HALF-OPEN（恢复试探）**：冷却到期后首个到达的会话经 flock 内 CAS 获得试探权（10min 未落地视为死亡可回收，其余会话继续跳过），probe 成功即复位，失败按上述规则再熔断。
+- **超时豁免**：审查慢导致的超时不计入熔断（慢≠链路故障，实证存在 1700s+ 健康审查）。
+- **fail-open 容错**：状态文件损坏（文件级/字段级）与熔断器自身异常都不阻断审查——净化损坏条目、集成点兜底放行，熔断器是保障层不是故障源。
+
+preflight 集成：`preflight.mjs` 读取同一状态文件，OPEN 未到期 launcher 不担任族 `active`，`families[model].circuit` 输出熔断详情（cooldown 到期视为可试探，互斥归 runner）。
+
+手动管理（CLI）：
+
+```bash
+python3 scripts/circuit_breaker.py status [--json]   # 查看熔断状态
+python3 scripts/circuit_breaker.py reset <launcher>  # 复位（账号已恢复时）
+python3 scripts/circuit_breaker.py reset --all       # 复位全部
+python3 scripts/circuit_breaker.py trip <launcher> [原因] [--for <小时>]   # 手动熔断（默认 24h，线下已知账号不可用时；恢复用 reset）
+```
 
 ## 错误处理
 

@@ -46,6 +46,9 @@ import sys
 import time
 from pathlib import Path
 
+# 同目录脚本直接执行时脚本目录自动入 sys.path，import 安全
+from circuit_breaker import CircuitBreaker
+
 # 模型→启动器链是本机配置（launcher 名对应维护者 zsh profile 中的账号级函数），
 # 唯一事实源为 configs/launchers.json（.gitignore 排除，不随仓分发）；
 # configs/launchers.example.json 是入库模板。文档只描述模型集合与选择规则。
@@ -193,11 +196,14 @@ def append_summary_log(record: dict) -> None:
         pass
 
 
-def probe_launcher(launcher: str) -> tuple[bool, str]:
+def probe_launcher(launcher: str) -> tuple[bool, str, str]:
     """用最小 prompt 探测 launcher 全链路可用性，预期 ~10s。
 
     判定宽松（输出含 pong 即通过）：探针目标是筛掉"链路根本不通"（function 缺失、
-    binary 损坏、API 认证失败、CLI 内部错误），而非校验模型回答质量。
+    binary 损坏、API 认证失败、限流），而非校验模型回答质量。
+
+    返回 (是否通过, 摘要, 完整输出)。完整输出（截 2000 字符）供熔断器识别限流信号
+    与解析服务端恢复时间——摘要只截 80 字符，实证曾恰好截断恢复时间字段。
     """
     cmd = build_launcher_cmd(launcher, PROBE_PROMPT, flags=PROBE_CLI_FLAGS)
     try:
@@ -209,17 +215,40 @@ def probe_launcher(launcher: str) -> tuple[bool, str]:
             stdin=subprocess.DEVNULL,
             env=build_review_env(launcher),
         )
-    except subprocess.TimeoutExpired:
-        return False, f"probe 超时（>{PROBE_TIMEOUT}s 无响应）"
-    except Exception as exc:
-        return False, f"probe 启动异常: {exc}"
+    except subprocess.TimeoutExpired as exc:
+        # 超时前 launcher 可能已输出部分内容（如挂起型限流：先打印 429 再挂起）——
+        # 保留给熔断器识别限流信号；output 可能是 str 或 bytes，统一归一为 str
+        def _as_text(chunk) -> str:
+            if chunk is None:
+                return ""
+            return chunk if isinstance(chunk, str) else chunk.decode("utf-8", "replace")
 
+        partial = (_as_text(exc.stdout) + "\n" + _as_text(exc.stderr))[:2000]
+        raw = partial if partial.strip() else f"probe timeout after {PROBE_TIMEOUT}s"
+        return False, f"probe 超时（>{PROBE_TIMEOUT}s 无响应）", raw
+    except Exception as exc:
+        return False, f"probe 启动异常: {exc}", f"probe launch exception: {exc}"
+
+    raw = ((proc.stdout or "") + "\n" + (proc.stderr or ""))[:2000]
     out = (proc.stdout or "").strip()
     if "pong" in out.lower():
-        return True, f"probe ok: {out[:60]!r}"
+        return True, f"probe ok: {out[:60]!r}", raw
     detail = out[:80] or "(stdout 空)"
     err = (proc.stderr or "").strip()[:80]
-    return False, f"probe 异常: exit={proc.returncode}, stdout={detail!r}, stderr={err!r}"
+    return False, f"probe 异常: exit={proc.returncode}, stdout={detail!r}, stderr={err!r}", raw
+
+
+def _breaker_call(log_file: Path, note: str, fn, fallback):
+    """熔断器调用的 fail-open 兜底：熔断器是保障层，其自身任何异常都不应阻断
+    审查主流程——allow 异常按放行兜底（fail-open 漏过一次探测的代价远小于
+    整个模型审查崩溃），record 异常按忽略兜底。字段级损坏之外未知的异常形态
+    由本层最后拦截（_read_state 已净化已知损坏形态）。
+    """
+    try:
+        return fn()
+    except Exception as exc:
+        log_event(log_file, f"[breaker] {note} 异常，按兜底继续: {exc}")
+        return fallback
 
 
 def kill_process_group(proc: subprocess.Popen) -> None:
@@ -452,9 +481,23 @@ def run_one_model(
 
     last_error = "未尝试任何 launcher"
     last_launcher = launchers[-1]
+    breaker = CircuitBreaker()
+    skipped_open = 0
 
     for launcher in launchers:
         last_launcher = launcher
+
+        # 跨会话熔断裁决：熔断期内零请求（含 probe）——并行 flow-dev 会话共享状态，
+        # 已限流的 launcher 不再被每个会话重复探测（实证：5h 限流后 5 次调用各白赔一次 probe）
+        allowed, breaker_reason = _breaker_call(
+            log_file, f"allow({launcher})", lambda: breaker.allow(launcher, slug), (True, "熔断器异常放行")
+        )
+        if not allowed:
+            skipped_open += 1
+            last_error = f"熔断跳过: {breaker_reason}"
+            log_event(log_file, f"[skip] {launcher} {breaker_reason}")
+            continue
+
         result_file.write_text("")
         err_file.write_text("")
         launcher_file.write_text(launcher)
@@ -463,11 +506,14 @@ def run_one_model(
         # 避免在坏链路上空耗一次完整审查周期（坏链路失败可能数分钟后才暴露）。
         log_event(log_file, f"[probe] {launcher} 探测中（{PROBE_PROMPT!r}，上限 {PROBE_TIMEOUT}s）...")
         t_probe0 = time.time()
-        probe_ok, probe_msg = probe_launcher(launcher)
+        probe_ok, probe_msg, probe_raw = probe_launcher(launcher)
         log_event(log_file, f"[probe] {launcher} {'通过' if probe_ok else '失败'}（{time.time() - t_probe0:.1f}s）: {probe_msg}")
         if not probe_ok:
+            _breaker_call(log_file, "record_failure", lambda: breaker.record_failure(launcher, probe_raw or probe_msg, slug), None)
             last_error = f"probe 失败: {probe_msg}"
             continue
+        # probe 通过即链路恢复证据：复位熔断（含 half-open 试探成功场景）
+        _breaker_call(log_file, "record_success", lambda: breaker.record_success(launcher), None)
 
         # 审查精简配置见 build_launcher_cmd / build_review_env：禁 skills/MCP、限 allowedTools、
         # 覆盖 agent teams/并发 env，把与代码审查无关的全局重型 settings 挡在子进程外
@@ -540,9 +586,23 @@ def run_one_model(
                 })
                 return result
             last_error = f"exit={exit_code}; {reason or '校验失败'}"
+            if not timed_out:
+                # 超时强杀不计入熔断：审查慢不等于链路故障（实证存在 1700s+ 健康审查），
+                # 计入会把慢但健康的链路误熔断；其余失败喂完整输出供限流信号识别
+                fail_output = ""
+                try:
+                    fail_output = (
+                        err_file.read_text(encoding="utf-8", errors="replace")[:1000]
+                        + "\n"
+                        + result_file.read_text(encoding="utf-8", errors="replace")[:1000]
+                    )
+                except OSError:
+                    pass
+                _breaker_call(log_file, "record_failure", lambda: breaker.record_failure(launcher, fail_output or last_error, slug), None)
             log_event(log_file, f"[retry] {launcher} 产物校验失败，换备用 launcher: {last_error}")
 
         except Exception as exc:
+            _breaker_call(log_file, "record_failure", lambda: breaker.record_failure(launcher, f"启动异常: {exc}", slug), None)
             last_error = f"启动异常: {exc}"
             log_event(log_file, f"[error] {launcher} {last_error}")
         finally:
@@ -550,6 +610,8 @@ def run_one_model(
             err_fd.close()
 
     total_elapsed = round(time.time() - t_model0, 1)
+    if skipped_open == len(launchers):
+        last_error = f"全部 {len(launchers)} 个 launcher 熔断中（最后状态: {last_error}）"
     log_event(log_file, f"[degraded] {model} 全部 launcher 均失败: {last_error}")
     append_summary_log({
         "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
