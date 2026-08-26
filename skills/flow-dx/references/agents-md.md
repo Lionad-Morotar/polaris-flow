@@ -36,6 +36,8 @@
 1. **gsd-docs**
    * 不存在：派发子代理执行 `gsd-map-codebase`，明确要求——生成的 `.planning/codebase/*.md` 必须使用中文撰写；技能执行完毕后检查文档语言，对非中文内容兜底翻译；**禁止 git 提交**
    * 已存在：读 `~/.claude/skills/flow-docs/SKILL.md` 按其 Workflow 执行（检查 → 过期则增量更新，默认模式即够，无需 flag）
+   * `meta.yaml` 缺失降级：文档在盘但 `.planning/meta.yaml` 缺失时 flow-docs preflight 拦「非 GSD 项目」——勿降级 gsd-map-codebase 全量重建，bootstrap 恢复：`git log --diff-filter=A -- .planning/codebase/` 定位文档基线提交写入 `from`，按 flow-docs gsd-sync.md 指纹协议算当前文档指纹写入 `hash`，再以 `--force` 触发增量同步（bootstrap 后 hash 一致、isOld 恒 false，不 --force 不会执行）
+   * 指纹一致性：任何对 `.planning/codebase/*.md` 的手工修改（含主代理补漏）之后必须重算指纹写回 `meta.yaml.hash`，否则下次 flow-docs 误判文档过期
    * `gsd-sdk` 降级：本机 `gsd-sdk` 可能是 fnm wrapper（仅 `run`/`auto`/`init`，无 `query` 子命令）——workflow 里 `gsd-sdk query init.map-codebase` / `query agent-skills` 失败时手动填充 init context：`mapper_model` 省略（Agent 工具继承会话模型）、`date` 取当日、`AGENT_SKILLS_MAPPER` 尾部注入缺失不阻塞（mapper agent 自带模板），汇报中如实标注
    * 等 mapper 完成用 task-notification 而非 `TaskOutput block=true` 轮询——后者超时回吐的是子代理 JSONL 转录的大段截断（4 个并行各吐一坨）；GSD workflow 自带的 commit 步骤按上方"禁止 git 提交"约束跳过，入库由本手册 Step 4 垂直切片统一收尾
    * 生成后密钥扫描（**rg 版，禁用 `-E`**——rg 原生支持正则，误用 `rg -E` 会报错退出触发 `||` 短路，打印假阴性）：
