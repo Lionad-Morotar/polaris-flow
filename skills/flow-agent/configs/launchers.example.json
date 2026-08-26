@@ -20,6 +20,10 @@
       "launchers": ["<launcher-glm-1>", "<launcher-glm-2>"],
       "timeout": 1800
     },
+    "glm-5.3-flash": {
+      "launchers": ["<launcher-glm-flash-1>"],
+      "timeout": 1800
+    },
     "qwen-3.8-max": {
       "launchers": ["<launcher-qwen-1>"],
       "timeout": 1800

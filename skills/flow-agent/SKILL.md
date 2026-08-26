@@ -3,7 +3,7 @@ name: flow-agent
 description: 主动发起外部正交审查：调用者描述自己用什么模型做了什么，flow-agent 从正交视角启动一个或多个模型的快速外部检查
 argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--deep] [--no-preamble] [--timeout <seconds>] [--output-dir <dir>]
 metadata:
-  version: 0.1.0-alpha.2
+  version: 0.1.0-alpha.3
 ---
 
 ## 概念澄清
@@ -30,7 +30,7 @@ metadata:
 - `--session-file`（默认 无）：替代 `<target>` 的方式之一：显式指定 session history jsonl 文件路径。
 - `--task`（必填）：调用者描述：使用什么模型做了什么内容。例如 `"glm-5.3 完成 UltraThoughts 需求分析"`
 - `--slug`（必填）：产物标识，用于 run 目录（`~/.flow-dev/runs/<slug>/`）、产物目录（`<output-dir>/<slug>/`）与 PID/错误日志命名。日期前缀由调用方负责：flow-dev 传入的 slug 形如 `260727-xxx-code-review`（`<YYMMDD>-` 创建日前缀），flow-agent 不自行添加
-- `--caller-model`（默认 从 `--task` 解析）：主代理使用的模型名：`kimi-k3` / `kimi-k3-full` / `glm-5.3` / `qwen-3.8-max` / `deepseek-v4-flash` / `minimax-m3`
+- `--caller-model`（默认 从 `--task` 解析）：主代理使用的模型名：`kimi-k3` / `kimi-k3-full` / `glm-5.3` / `glm-5.3-flash` / `qwen-3.8-max` / `deepseek-v4-flash` / `minimax-m3`
 - `--target-model`（默认 `auto`）：目标审查模型名或 `auto`。`auto` 时由 `--effort` 和 `--caller-model` 决定启动哪些模型
 - `--effort`（默认 `normal`）：审查强度：`normal`（启动一个与 caller 不同的模型，按映射表选择）/ `max`（normal + deepseek）/ `ultra`（所有非 caller 模型）/ `fable`（所有模型，包括 caller 模型，用于获得最大正交覆盖）
 - `--deep`（默认 关闭（light））：审查模式。默认 **light**：注入前言框定为快速正交 sanity check（聚焦会真正造成故障的高/中严重度发现，不逐行 review、不穷举边界、不搜索所有领域；无高/中严重度发现时整份输出仅一行结论，禁止罗列已验证角度或复述验证过程/成功路径；见 `references/prompt-template.md`）。`--deep` 切换为深入审查，保留调用方原始 prompt 不注入前言，并把 kimi 视角升级为 `kimi-k3-full`（全量 k3·1M 上下文）；light 模式 kimi 视角用 `kimi-k3`（k3-256k，强度等同、消耗更低）。旧名 `--full` 已移除：与 flow-dev `--mode full` 同名异义区隔，传入时报错并提示新写法
@@ -43,7 +43,7 @@ metadata:
 ## 支持模型与启动器
 
 - `kimi-k3`（light 默认档位，k3-256k）、`kimi-k3-full`（`--deep` 档，全量 k3·1M）
-- `glm-5.3`、`qwen-3.8-max`、`deepseek-v4-flash`、`minimax-m3`
+- `glm-5.3`、`glm-5.3-flash`、`qwen-3.8-max`、`deepseek-v4-flash`、`minimax-m3`
 
 每个模型的 zsh 启动器链（数组顺序即降级优先级）与默认超时（1800s）配置在 `configs/launchers.json`——该文件是本机私有配置，不入库；脚本运行时读取，缺失或非法会拒跑并指向 `configs/launchers.example.json` 模板。
 
@@ -51,10 +51,11 @@ metadata:
 
 ## `--effort` 选择规则（`--target-model auto` 时）
 
-- `normal`：caller 为 glm-5.3 `kimi-k3`；caller 为 kimi-k3 `glm-5.3`；caller 为 qwen-3.8-max `glm-5.3`；caller 为 deepseek-v4-flash `glm-5.3`；caller 为 minimax-m3 `glm-5.3`
-- `max`：caller 为 glm-5.3 `kimi-k3` + `deepseek-v4-flash`；caller 为 kimi-k3 `glm-5.3` + `deepseek-v4-flash`；caller 为 qwen-3.8-max `glm-5.3` + `deepseek-v4-flash`；caller 为 deepseek-v4-flash `glm-5.3` + `kimi-k3`；caller 为 minimax-m3 `glm-5.3` + `kimi-k3`
-- `ultra`：caller 为 glm-5.3 除 glm-5.3 外全部；caller 为 kimi-k3 除 kimi-k3 外全部；caller 为 qwen-3.8-max 除 qwen-3.8-max 外全部；caller 为 deepseek-v4-flash 除 deepseek-v4-flash 外全部；caller 为 minimax-m3 除 minimax-m3 外全部
-- `fable`：caller 为 glm-5.3 全部 5 个模型；caller 为 kimi-k3 全部 5 个模型；caller 为 qwen-3.8-max 全部 5 个模型；caller 为 deepseek-v4-flash 全部 5 个模型；caller 为 minimax-m3 全部 5 个模型
+- `normal`：caller 为 glm-5.3 `kimi-k3`；caller 为 glm-5.3-flash `kimi-k3`；caller 为 kimi-k3 `glm-5.3`；caller 为 qwen-3.8-max `glm-5.3`；caller 为 deepseek-v4-flash `glm-5.3`；caller 为 minimax-m3 `glm-5.3`
+- `max`：caller 为 glm-5.3 `kimi-k3` + `deepseek-v4-flash`；caller 为 glm-5.3-flash `kimi-k3` + `deepseek-v4-flash`；caller 为 kimi-k3 `glm-5.3` + `deepseek-v4-flash`；caller 为 qwen-3.8-max `glm-5.3` + `deepseek-v4-flash`；caller 为 deepseek-v4-flash `glm-5.3` + `kimi-k3`；caller 为 minimax-m3 `glm-5.3` + `kimi-k3`
+- `ultra`：除 caller 族外的其余各族各一员（kimi 与 GLM 两族按下述规则选档）
+- `fable`：全部 5 族各一员（含 caller 所在档位，同族另一档不重复计入）
+- kimi 与 GLM 两族按审查模式选档：light 用低消耗档（`kimi-k3` / `glm-5.3-flash`），`--deep` 用强档（`kimi-k3-full` / `glm-5.3`）；caller 自身的同族自审条目保持发起档位不升级
 
 ## 工作流程
 
@@ -65,7 +66,7 @@ metadata:
    - [ ] 确认 `--effort` 属于 `normal|max|ultra|fable`；
    - [ ] 确认 `--target-model` 为 `auto` 或支持的模型名；
    - [ ] 确认 `--output-dir` 目录存在，不存在则创建；
-   - [ ] 若 `--target-model` 显式指定且等于 `--caller-model`（或与 caller 同族：`kimi-k3` 与 `kimi-k3-full` 互为同族），拒绝执行并返回错误；
+   - [ ] 若 `--target-model` 显式指定且等于 `--caller-model`（或与 caller 同族：`kimi-k3`/`kimi-k3-full` 互为同族，`glm-5.3`/`glm-5.3-flash` 互为同族），拒绝执行并返回错误；
    - [ ] 创建 `~/.flow-dev/runs/<slug>/` 目录（用于 PID、settings、错误日志）；
    - [ ] **环境预检**：运行 `node ~/.claude/skills/flow-agent/scripts/preflight.mjs`（按族检查启动器 + node/python3）。本次目标模型所属族 `ok` 为 false 时立即停止并报告环境错误；`active` 字段给出该族当前首选可用启动器
 
@@ -74,7 +75,7 @@ metadata:
    - [ ] 若目录不存在则创建。
 
 3. **选择目标审查模型集合**
-   - [ ] 若 `--target-model` 为具体模型名：集合 = `{该模型}`，并校验该模型不等于 `--caller-model` 且不与 caller 同族（`kimi-k3`/`kimi-k3-full` 互为同族）；
+   - [ ] 若 `--target-model` 为具体模型名：集合 = `{该模型}`，并校验该模型不等于 `--caller-model` 且不与 caller 同族（`kimi-k3`/`kimi-k3-full` 互为同族，`glm-5.3`/`glm-5.3-flash` 互为同族）；
    - [ ] 若 `--target-model` 为 `auto`：读取 `references/model-mapping.md`，根据 `--caller-model` 和 `--effort` 计算模型集合；`--deep` 时把集合中的 `kimi-k3` 升级为 `kimi-k3-full`（caller 自身的同族条目不升级）；
    - [ ] **`fable` 特殊规则**：仅在 `--target-model` 为 `auto` 时生效，集合包含 caller 模型本身；此时 caller 模型不计入"显式 target-model 等于 caller-model"的拒绝逻辑；caller 同族的另一档位不重复计入（caller 为 `kimi-k3` 时集合含 `kimi-k3` 本身、不含 `kimi-k3-full`）；
    - [ ] 记录每个模型的 `target_model` 与首选 `launcher`。
@@ -105,7 +106,7 @@ metadata:
      {
        "slug": "<slug>",
        "task": "<task-description>",
-       "caller_model": "glm-5.3|kimi-k3|qwen-3.8-max|deepseek-v4-flash|minimax-m3",
+       "caller_model": "glm-5.3|glm-5.3-flash|kimi-k3|qwen-3.8-max|deepseek-v4-flash|minimax-m3",
        "effort": "normal|max|ultra|fable",
        "reviews": [
          {

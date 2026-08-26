@@ -6,7 +6,7 @@ flow-agent 外部审查执行模板。
   python3 run-external-review.py \
     --slug <slug> \
     --review-dir <docs/reviews/YYYY-MM-DD-<slug>> \
-    --caller-model <kimi-k3|kimi-k3-full|glm-5.3|qwen-3.8-max|deepseek-v4-flash|minimax-m3> \
+    --caller-model <kimi-k3|kimi-k3-full|glm-5.3|glm-5.3-flash|qwen-3.8-max|deepseek-v4-flash|minimax-m3> \
     [--prompt-file <path/to/prompt.md>] \
     [--session-id <session-id> | --session-file <path/to/session.jsonl>] \
     [--effort normal|max|ultra|fable] \
@@ -313,14 +313,19 @@ def extract_assistant_text(session_file: Path) -> str:
     return "\n\n".join(texts)
 
 
-def _same_family(a: str, b: str) -> bool:
-    """kimi-k3 与 kimi-k3-full 同族：k3 的 256k 与 1M 两个上下文档位，强度等同。
+# 同族（不构成正交视角）的模型组：
+# - kimi-k3 / kimi-k3-full：k3 的 256k 与 1M 两个上下文档位，强度等同；
+# - glm-5.3 / glm-5.3-flash：同厂同系的全量与轻量档，训练数据和对齐高度同源。
+KIMI_FAMILY = {"kimi-k3", "kimi-k3-full"}
+GLM_FAMILY = {"glm-5.3", "glm-5.3-flash"}
+MODEL_FAMILIES = [KIMI_FAMILY, GLM_FAMILY]
 
-    同族模型不构成正交视角——审查集合内同族只保留一个档位，
+
+def _same_family(a: str, b: str) -> bool:
+    """同族模型不构成正交视角——审查集合内同族只保留一个档位，
     与 caller 配对的同族成员同样视为自审。
     """
-    kimi_family = {"kimi-k3", "kimi-k3-full"}
-    return a in kimi_family and b in kimi_family
+    return any(a in family and b in family for family in MODEL_FAMILIES)
 
 
 def select_targets(caller_model: str, effort: str, target_model: str | None, deep_mode: bool = False) -> list[str]:
@@ -337,9 +342,10 @@ def select_targets(caller_model: str, effort: str, target_model: str | None, dee
         return [target_model]
 
     if effort == "normal":
-        targets = ["kimi-k3"] if caller_model == "glm-5.3" else ["glm-5.3"]
+        # GLM 族（glm-5.3 / glm-5.3-flash）caller 反选 kimi-k3：glm-5.3 与族内另一成员同厂不构成正交
+        targets = ["kimi-k3"] if caller_model in GLM_FAMILY else ["glm-5.3"]
     elif effort == "max":
-        base = ["kimi-k3"] if caller_model == "glm-5.3" else ["glm-5.3"]
+        base = ["kimi-k3"] if caller_model in GLM_FAMILY else ["glm-5.3"]
         # max 固定补一个 deepseek 视角；caller 已是 deepseek-v4-flash 时同厂视角不构成正交，改补 kimi-k3
         if caller_model != "deepseek-v4-flash":
             base.append("deepseek-v4-flash")
@@ -353,13 +359,18 @@ def select_targets(caller_model: str, effort: str, target_model: str | None, dee
         # ultra：所有非 caller 模型，caller 同族的另一档位同样排除
         targets = sorted(m for m in MODEL_CONFIG if m != caller_model and not _same_family(m, caller_model))
 
-    # kimi 同族在集合中只占一个视角：--deep 升级为全量 k3，否则保留 k3-256k。
+    # kimi 与 GLM 两族在集合中各占一个视角，按审查模式选档：
+    # light 用低消耗档（kimi-k3 / glm-5.3-flash），--deep 用强档（kimi-k3-full / glm-5.3）。
+    # 先去重再升级——升级把 light 档替换为 deep 档，若 deep 档已在集合会产生重复条目
+    # （重复模型会被并发启动两次、写同一个结果文件互相覆盖）。
     # 升级不触碰 caller 的同族自审条目（fable 含 caller 本身）——caller 用什么档位发起，自审就用什么档位。
-    if deep_mode and "kimi-k3" in targets and caller_model != "kimi-k3":
-        targets = ["kimi-k3-full" if m == "kimi-k3" else m for m in targets]
-    if "kimi-k3" in targets and "kimi-k3-full" in targets:
-        drop = "kimi-k3" if deep_mode else "kimi-k3-full"
-        targets = [m for m in targets if m != drop]
+    tier_pairs = ((KIMI_FAMILY, "kimi-k3", "kimi-k3-full"), (GLM_FAMILY, "glm-5.3-flash", "glm-5.3"))
+    for family, light_tier, deep_tier in tier_pairs:
+        if light_tier in targets and deep_tier in targets:
+            drop = light_tier if deep_mode else deep_tier
+            targets = [m for m in targets if m != drop]
+        if deep_mode and caller_model not in family and light_tier in targets:
+            targets = [deep_tier if m == light_tier else m for m in targets]
     return targets
 
 

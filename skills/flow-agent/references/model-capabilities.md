@@ -22,6 +22,11 @@
 - 综合能力：顶尖编码和安全能力；
 - 适用场景：复杂代码审查、架构与安全性审查、需要强推理时；
 
+## glm-5.3-flash
+
+- 定位：`glm-4.7`（`-flash`）的替代；综合能力略胜 `deepseek-v4-flash`，响应迅速；
+- 适用场景：coding 与办公场景双修；审查编队中 GLM 族的低消耗档——light 模式 `--effort=ultra`/`fable` 的 GLM 视角、显式 `--target-model glm-5.3-flash` 的专项检查；
+
 ## deepseek-v4-flash
 
 - 综合能力：顶尖性价比，响应迅速，不错的智能水平；

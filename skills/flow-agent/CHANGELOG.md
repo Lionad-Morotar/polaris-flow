@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3] - 2026-08-26
+
+- 新增目标模型 `glm-5.3-flash`（`glm-4.7`(-flash) 的替代，综合能力略胜 `deepseek-v4-flash`，coding 与办公场景双修）：启动器链 `cgf`/`cgfwz`
+- GLM 族（`glm-5.3` / `glm-5.3-flash`）与 kimi 族同规则：normal/max 反选避让同厂视角；ultra/fable 集合同族只留一档——light 用低消耗档（`glm-5.3-flash`），`--deep` 升级强档（`glm-5.3`）；显式 target 与 caller 同族拒绝
 - 熔断器限流识别纳入并发上限：Kimi 的 403 形态（「You've reached your concurrent request limit」）靠 `concurrent…limit` 特征词纳入 `RATE_LIMIT_RE`（不用裸 403，避免把凭证失效误当限流）；无恢复时间可解析，按既有五档累进首档 2min 熔断
 
 ## [0.1.0-alpha.2] - 2026-08-25
