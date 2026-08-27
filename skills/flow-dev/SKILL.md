@@ -3,7 +3,7 @@ name: flow-dev
 description: 开发流程，将零散的需求任务重新组织成拆解、TDD Dev、Review、验证到维护记忆、更新文档的一整条的成熟工业流程。
 argument-hint: <task description> [--mode light|full|quick|dev|fix] [--depth mvp|prod|hifi] [--dissection] [--worktree] [--skip-review] [--interactive] [--dry-run] [--stage] [--delegate] [--stop dissection|thinking|prd|devgoal|slice] [--resume [task-slug]]
 metadata:
-  version: 0.2.1
+  version: 0.2.2
 ---
 ## 要求
 
@@ -23,7 +23,7 @@ metadata:
 - to-prd — skill（SKILL.md）：仅 `--mode full` 使用：读 `~/.claude/skills/to-prd/SKILL.md` 后按流程执行
 - flow-code-review — skill（`~/.claude/skills/flow-code-review/SKILL.md`）：DevLoop 审查流程（多角度 finder → 去重/验证 → findings JSON 契约）。默认由外部异族模型执行（Step 5 顶部后台发起，prompt 陈述本技能路径、effort 档位、`--base <base_ref>` 与 findings JSON 输出契约，Step 6 收集解析）；`--mode fix`、`--skip-review` 或外部执行运行时失败降级为本地以 `--json --effort <档位> --base <base_ref>` 调用；详见 Step 5 / 6
 - flow-mem — skill（`~/.claude/skills/flow-mem/SKILL.md`）+ 脚本（`scripts/search.mjs`）：Step 0 `--worktree` 创建 worktree 前检索 git/worktree 环境坑点（--mode h4，只读）；Step 3 DevGoal 前概览现有框架（--mode frameworks，只读）并按任务类型检索 decisions 库既往用户决策（--kb decisions --mode h4，只读）；Step 4 每个 Slice 开发前按 Slice 预搜索坑点（--mode h4，只读）；Step 9 收尾沉淀本次运行产物（--learn，框架坑点归 framework 切片、用户表态过的偏好与决策归 decisions 切片）；未安装时相应步骤跳过并记入决策台账
-- flow-agent — skill（`~/.claude/skills/flow-agent/SKILL.md`）+ 脚本（`scripts/run-external-review.py`）：外部审查 runner，按 `references/external-review-protocol.md` 契约调起与 caller 异族的外部模型执行正交审查；在 UltraThoughts、grill-me、code-review（DevLoop 审查）检查点调用，详见 Step 1 / 2 / 5；code-review 检查点在 Step 5 顶部以后台并行方式发起（Bash `run_in_background`，附 `--no-preamble` 跳过 light 前言——前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程冲突）、Step 6 收集结果，其余检查点同步调用；runner 负责选择并启动外部模型进程（可替换为任意按 protocol 契约实现的技能或脚本，最小实现只需一个能接收 prompt、产出 `review-<model>.md` 并按协议返回 JSON 的脚本）
+- flow-agent — skill（`~/.claude/skills/flow-agent/SKILL.md`）+ 脚本（`scripts/run-external-review.py`）：外部审查 runner，按 `references/external-review-protocol.md` 契约调起与 caller 异族的外部模型执行审查，两种风格（`--style`）：需求理解类检查点（需求树拆解 / UltraThoughts / grill-me）用 `adversarial`（对抗发散——证伪关键主张 + 枚举未覆盖象限，产出盲区清单），code-review 检查点用 `orthogonal`（正交验证——检查已做的对不对，产出故障 findings）；在 UltraThoughts、grill-me、code-review（DevLoop 审查）检查点调用，详见 Step 1 / 2 / 5；code-review 检查点在 Step 5 顶部以后台并行方式发起（Bash `run_in_background`，附 `--no-preamble` 跳过 light 前言——前言的「快速 sanity check / 一行结论」框定与 flow-code-review 结构化流程冲突）、Step 6 收集结果，其余检查点同步调用；runner 负责选择并启动外部模型进程（可替换为任意按 protocol 契约实现的技能或脚本，最小实现只需一个能接收 prompt、产出 `review-<model>.md` 并按协议返回 JSON 的脚本）
 - Agent 工具 — 运行时能力：仅 `--delegate` 使用，分派开发 / 审查 / 修复子代理，分派与返回契约见 `references/delegation.md`
 
 ## 参数与变量
@@ -108,7 +108,7 @@ code-review → review → fixing → reporting → merging → done/blocked/mer
 node -e "console.log(new Date().toLocaleString('sv-SE'))"
 ```
 
-需求树拆解（`--dissection` 时）、UltraThoughts、grill-me、Slice 开发完成（code-review 检查点）后各有一个外部审查检查点，由外部审查 runner 执行；这些检查点不新增独立 phase，但会在 `state.json` 的 `reviews[]` 中分别记录。`--mode light`（默认）只保留 code-review 检查点与需求树拆解检查点（若 `--dissection` 开启）；`--mode full` 追加 UltraThoughts、grill-me 两个检查点（启用即执行）。code-review 检查点是 DevLoop 唯一审查、单轨执行：默认外部执行 flow-code-review 流程（外部异族模型按该技能流程审查并产出 findings JSON），每 Slice 恒执行一次；发起动作在 Step 5 顶部后台执行，与下一 Slice 只读调研并行，Step 6 收集 findings 并入 Bugs；`--mode fix`、`--skip-review` 或外部执行运行时失败降级为本地执行 flow-code-review（外部检查点记 `reviews[]` skipped/failed、不过 `review` phase，降级原因入决策台账与最终报告）。需求树拆解检查点是 Gate（恒执行，不适用跳过与降级规则）：审查失败或全部降级时 phase → `blocked`，拆解结果未经正交检查不得进入 Step 2。
+需求树拆解（`--dissection` 时）、UltraThoughts、grill-me、Slice 开发完成（code-review 检查点）后各有一个外部审查检查点，由外部审查 runner 执行；这些检查点不新增独立 phase，但会在 `state.json` 的 `reviews[]` 中分别记录。前三个检查点（需求理解类产物）用对抗发散审查（runner `--style adversarial`，见 `references/external-review-protocol.md`「审查风格」），code-review 检查点用正交验证（风格默认）。`--mode light`（默认）只保留 code-review 检查点与需求树拆解检查点（若 `--dissection` 开启）；`--mode full` 追加 UltraThoughts、grill-me 两个检查点（启用即执行）。code-review 检查点是 DevLoop 唯一审查、单轨执行：默认外部执行 flow-code-review 流程（外部异族模型按该技能流程审查并产出 findings JSON），每 Slice 恒执行一次；发起动作在 Step 5 顶部后台执行，与下一 Slice 只读调研并行，Step 6 收集 findings 并入 Bugs；`--mode fix`、`--skip-review` 或外部执行运行时失败降级为本地执行 flow-code-review（外部检查点记 `reviews[]` skipped/failed、不过 `review` phase，降级原因入决策台账与最终报告）。需求树拆解检查点是 Gate（恒执行，不适用跳过与降级规则）：审查失败或全部降级时 phase → `blocked`，拆解结果未经外部审查不得进入 Step 2。
 
 ## 停止点（--stop）
 
@@ -182,9 +182,9 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] 已运行自我批评三问：可证伪性、原子性、覆盖完备性（叶节点并集 = 原始想法全部实质，不多不少）；发现的问题已就地重写
      - [ ] 需求树叶节点已标注为下游 grill-me 问题清单与 DevGoal Slice 划分的原料
      - [ ] 拆解文档（含自我批评三问的发现或 `clean` 裁决）写入 `<working-dir>/docs/dissections/<task-slug>.md`，设置 `outputs.dissection_path`
-     - [ ] **外部审查检查点（需求树拆解，Gate）**：若未传 `--skip-review`，对拆解结果做正交审查，未经检查不得进入下游（审查纪律见 `references/dissection.md`「外部正交审查」；审查 prompt 按陈述式：陈述需求树的规模与覆盖边界——中间节点数、叶节点数、自我批评三问的裁决结果；不下达"重点关注 X"的审查指令）：
-       - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-dissection', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-       - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-dissection/prompt.md`，内容含任务描述（`<caller-model> 完成需求树拆解`）、被审查文件（`docs/dissections/<task-slug>.md`）与陈述式审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-dissection --review-dir <working-dir>/docs/reviews/<task-slug>-dissection --prompt-file <working-dir>/docs/reviews/<task-slug>-dissection/prompt.md --caller-model <caller-model> --effort normal`
+     - [ ] **外部审查检查点（需求树拆解，Gate，对抗发散）**：若未传 `--skip-review`，对拆解结果做对抗发散审查，未经检查不得进入下游（审查纪律见 `references/dissection.md`「外部对抗审查」；审查 prompt 按对抗发散框架（`flow-agent/references/prompt-template.md`）：陈述需求树的规模与覆盖边界——中间节点数、叶节点数、自我批评三问的裁决结果，对抗姿态与发散透镜由框架固定部分承载；不下达"重点关注 X"的审查指令）：
+       - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-dissection', task: '...', caller_model: '<caller-model>', effort: 'normal', style: 'adversarial', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
+       - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-dissection/prompt.md`，内容含任务描述（`<caller-model> 完成需求树拆解`）、被审查文件（`docs/dissections/<task-slug>.md`）与对抗发散审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-dissection --review-dir <working-dir>/docs/reviews/<task-slug>-dissection --prompt-file <working-dir>/docs/reviews/<task-slug>-dissection/prompt.md --caller-model <caller-model> --effort normal --style adversarial`
        - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
        - [ ] **若 runner 未返回 JSON，或全部 target_model 的 status 为 `failed`/`degraded`，禁止进入后续阶段**：记录 `external-review-failed` blocker，phase → `blocked`，在最终报告中显式标注；degraded 处置前先按鉴别锚点 Read 产物核实（单行阴性结论=校验器误判按通过记，空产物=真实失败，见 references/external-review-protocol.md「结果处理」）
        - [ ] 若任一模型 `status=degraded`（非全部），把降级原因写入决策台账
@@ -195,9 +195,9 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
    - [ ] 默认终端输出 UltraThoughts，不写文件，`outputs.ultrathoughts_path` 保持 `null`
    - [ ] `--mode full` 时输出到 `<working-dir>/docs/thoughts/<task-slug>.md` 并设置 `outputs.ultrathoughts_path`（`--dissection` 只影响拆解文档，不再强制 UltraThoughts 落档）
    - [ ] 更新 `state.json`：phase → `thinking`
-   - [ ] **外部审查检查点（UltraThoughts）**：若 `--mode full` 且未传 `--skip-review`（审查 prompt 按陈述式：陈述 UltraThoughts 已产出的目标定义性属性与可证伪验证，审查模型据此判断属性是否准确、验证是否真能证伪；不下达"重点关注 X"的审查指令）：
-     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-ultrathoughts', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md`，内容含任务描述（`<caller-model> 完成 UltraThoughts 需求分析`）、被审查文件（`docs/thoughts/<task-slug>.md`）与陈述式审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-ultrathoughts --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md --caller-model <caller-model> --effort normal`
+   - [ ] **外部审查检查点（UltraThoughts，对抗发散）**：若 `--mode full` 且未传 `--skip-review`（审查 prompt 按对抗发散框架（`flow-agent/references/prompt-template.md`）：陈述 UltraThoughts 已产出的目标定义性属性与可证伪验证，审查模型对每项属性构造证伪场景、从属性未覆盖的视角枚举遗漏象限；不下达"重点关注 X"的审查指令）：
+     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-ultrathoughts', task: '...', caller_model: '<caller-model>', effort: 'normal', style: 'adversarial', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
+     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md`，内容含任务描述（`<caller-model> 完成 UltraThoughts 需求分析`）、被审查文件（`docs/thoughts/<task-slug>.md`）与对抗发散审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-ultrathoughts --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md --caller-model <caller-model> --effort normal --style adversarial`
      - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
      - [ ] 若任一模型 `status=degraded`，把降级原因写入决策台账
    - [ ] **若 `--stop thinking`**：按「停止点」章节执行停止序列
@@ -212,9 +212,9 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
    - [ ] 已输出决策表格（含方案对比与最终选择）
    - [ ] 把决策台账写入 `<run-dir>/decisions.md`（运行时状态，恒写入；`--mode full` 时作外部审查检查点输入）
    - [ ] **仅 `--mode full`**：决策台账落档到 `<working-dir>/docs/decisions/<task-slug>.md`，设置 `outputs.decisions_path`
-   - [ ] **外部审查检查点（grill-me）**：若 `--mode full` 且未传 `--skip-review`：
-     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-grill-me', task: '...', caller_model: '<caller-model>', effort: 'normal', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
-     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md`，内容含任务描述（`<caller-model> 完成 grill-me 自问自答`）、被审查文件（`<run-dir>/decisions.md`）与陈述式审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-grill-me --review-dir <working-dir>/docs/reviews/<task-slug>-grill-me --prompt-file <working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md --caller-model <caller-model> --effort normal`
+   - [ ] **外部审查检查点（grill-me，对抗发散）**：若 `--mode full` 且未传 `--skip-review`（审查 prompt 按对抗发散框架：陈述决策清单与已权衡维度，审查模型挑战选项空间是否枚举充分、被否决方案是否被 strawman、构造证伪所选决策的场景）：
+     - [ ] 在 `state.json` 的 `reviews[]` 中追加 `{ slug: '<task-slug>-grill-me', task: '...', caller_model: '<caller-model>', effort: 'normal', style: 'adversarial', start_time: '<node -e "console.log(new Date().toLocaleString(\'sv-SE\')")>', end_time: null, reviews: [] }`
+     - [ ] 生成 prompt.md 到 `<working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md`，内容含任务描述（`<caller-model> 完成 grill-me 自问自答`）、被审查文件（`<run-dir>/decisions.md`）与对抗发散审查要求；随后同步调用 `python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py --slug <task-slug>-grill-me --review-dir <working-dir>/docs/reviews/<task-slug>-grill-me --prompt-file <working-dir>/docs/reviews/<task-slug>-grill-me/prompt.md --caller-model <caller-model> --effort normal --style adversarial`
      - [ ] 将返回的 JSON 回填到该 review 条目的 `reviews[]`，并设置 `end_time = node -e "console.log(new Date().toLocaleString('sv-SE'))"`
      - [ ] 若任一模型 `status=degraded`，把降级原因写入决策台账
    - [ ] **仅 `--mode full`**：已读取 `~/.claude/skills/to-prd/SKILL.md`，并使用 `to-prd` 技能将 PRD 文档沉淀到 `<working-dir>/docs/plans/<task-slug>.md`；`--mode light` 跳过本项，`outputs.prd_path` 保持 `null`

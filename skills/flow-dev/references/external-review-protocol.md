@@ -1,6 +1,6 @@
-# flow-dev 外部正交审查协议
+# flow-dev 外部审查协议
 
-本文件定义 `flow-dev` 何时、如何发起外部正交交叉审查。外部审查由一个**外部审查工具（external review runner，下称 runner）**承接：runner 是能按本协议契约调起至少一个异族模型、执行审查并返回 JSON 的自建技能或脚本，实现方式不限（多模型 CLI 启动器、API 封装皆可）。
+本文件定义 `flow-dev` 何时、如何发起外部交叉审查。外部审查由一个**外部审查工具（external review runner，下称 runner）**承接：runner 是能按本协议契约调起至少一个异族模型、执行审查并返回 JSON 的自建技能或脚本，实现方式不限（多模型 CLI 启动器、API 封装皆可）。
 
 ## 何时执行
 
@@ -10,6 +10,15 @@
 2. **Step 1 之后**：UltraThoughts 输出后，让外部模型审视需求与架构假设；
 3. **Step 2 之后**：grill-me 自问自答结束、决策台账写入后，让外部模型审视决策质量；
 4. **Slice 开发完成后（code-review 检查点）**：修复之前，外部异族模型执行 flow-code-review 流程，即 DevLoop 唯一审查（见下文「DevLoop 审查：外部执行 flow-code-review 流程」）。
+
+## 审查风格：验证型（orthogonal）vs 发散型（adversarial）
+
+前三个检查点（需求树拆解 / UltraThoughts / grill-me）审查的是**需求理解类产物**——无客观对错，风险形态是盲区与理解偏差；第四个检查点审查的是**代码 diff**——有客观对错，风险形态是故障。两者适用不同审查风格（runner 的 `--style` 参数）：
+
+- **`adversarial`（对抗发散，前三个检查点用）**：审查任务是证伪与发散，不是复述与确认。对抗——对每项关键主张构造能证伪它的具体场景，验证方式若区分不了"理解对/理解错"本身即缺陷；发散——从产出未覆盖的视角枚举遗漏象限（用户角色、运维部署、安全权限、时间状态演化、极端规模、失败路径等）。输出按「视角/象限 → 遗漏或偏差描述 → 建议证伪或补齐路径」组织成盲区清单。理由：验证型 sanity check 的「只报故障发现 / 无发现一行结论」框定在需求理解对象上大概率产出低信息量阴性结论——需求审查的价值恰恰在发散出的盲区清单；对抗姿态是任务定义（赋予立场），发散透镜是启发集（标注"不限于所列"），都不构成下文陈述式纪律所防的"方向框定"。
+- **`orthogonal`（正交验证，code-review 检查点用）**：保持既有 light sanity check 语义——检查已做的对不对，只报真正造成故障的高/中严重度发现。DevLoop 审查按 flow-code-review 流程执行，附 `--no-preamble`。
+
+两风格共用 runner 的模型选择、effort、降级与熔断链路，差异仅在前言框定与输出契约。
 
 执行策略：
 - **`--mode light`（默认）**：执行 code-review 检查点；若 `--dissection` 开启，追加需求树拆解检查点；
@@ -28,7 +37,7 @@ Slice 轮 code-review 检查点是 DevLoop 的**唯一审查**，单轨执行、
 - **`--depth hifi` 例外**：外部执行运行时失败不降级——hifi 质量门含「DevLoop 审查外部执行通过」，降级会使其失效；记 `external-review-failed` blocker、phase → `blocked`，`--resume` 恢复后重发收集
 - flow-code-review 的 effort 档位沿用 flow-dev 运行模式映射（见 `quality-gates.md`），作用于流程本身，与外部/本地执行者无关
 
-文档类检查点（UltraThoughts / grill-me）随 `--mode full` 启用即执行，每个 run 只发生一次。**需求树拆解检查点恒执行**：`--dissection` 是显式的拆解请求，拆解一旦发生即须过审，结果未经正交检查不得进入下游。拆解检查点是 Gate，不适用降级规则——失败即 blocked，不退化为主代理自审（自审无正交性）。
+文档类检查点（UltraThoughts / grill-me）随 `--mode full` 启用即执行，每个 run 只发生一次。**需求树拆解检查点恒执行**：`--dissection` 是显式的拆解请求，拆解一旦发生即须过审，结果未经外部审查不得进入下游。拆解检查点是 Gate，不适用降级规则——失败即 blocked，不退化为主代理自审（自审无正交性：与 caller 同视角，共享同一套隐含假设）。
 
 ## 调用方式
 
@@ -42,26 +51,27 @@ python3 ~/.claude/skills/flow-agent/scripts/run-external-review.py \
   --review-dir <working-dir>/docs/reviews/<task-slug>-ultrathoughts \
   --prompt-file <working-dir>/docs/reviews/<task-slug>-ultrathoughts/prompt.md \
   --caller-model <caller-model> \
-  --effort normal
+  --effort normal \
+  --style adversarial
 ```
 
 调用约定：
 
-- **prompt 用陈述式，不用指令式**：任务描述与 prompt 正文只陈述事实，不下达"重点关注 X"的审查指令，也不主动暴露自评盲区。原因：指令式 prompt 用主代理视角把审查方向框死，审查模型顺着主代理指的方向看，大概率复现主代理的盲区，"正交"名存实亡；陈述式暴露覆盖边界，审查模型自主检索还原主代理真正做了什么，从覆盖之外或验证方式的缺陷切入。各检查点陈述对象不同：文档类检查点陈述已产出的维度与属性（"查了排序 correctness / IR 契约 / 三入口等价性"）；DevLoop 审查检查点陈述 Slice 目标、验收标准与 diff 基线——**审查方法由 flow-code-review 流程规定，方法级指令不构成方向框定**，与"重点关注 X"类焦点指令是两回事。
+- **prompt 用陈述式，不用指令式（两种风格共用纪律）**：任务描述与 prompt 正文只陈述事实，不下达"重点关注 X"的审查指令，也不主动暴露自评盲区。原因：指令式 prompt 用主代理视角把审查方向框死，审查模型顺着主代理指的方向看，大概率复现主代理的盲区——"正交"与"对抗"都会名存实亡；陈述式暴露覆盖边界，审查模型自主检索还原主代理真正做了什么，从覆盖之外或验证方式的缺陷切入。各检查点陈述对象不同：文档类检查点陈述已产出的维度与属性（"查了排序 correctness / IR 契约 / 三入口等价性"）；DevLoop 审查检查点陈述 Slice 目标、验收标准与 diff 基线。**对抗姿态与发散透镜（adversarial 风格的固定部分）与审查方法（flow-code-review 流程）一样，是任务定义而非方向框定**——它们赋予审查立场与广度，不指向特定领域，与"重点关注 X"类焦点指令是两回事。
 - **多切片任务声明完整切片计划**：中间切片的审查 prompt 须陈述完整切片计划与后续动作（如"S3 将 bump 至 x.y.z 并 prepend CHANGELOG"、"S4 落地 /memory 页面"）。审查模型只能看到当前 diff 与 prompt，不知道后续计划时会把 bump 前的中间态当最终态审查，产出篡改已发布版本历史类的假发现（要求把 schema 迁移补进已发布的旧版 CHANGELOG、把后续切片才落地的路由报成死链）。裁决时区分两类发现：不知计划导致的假发现按「计划内中间态」驳回并记决策台账，计划无关的真发现（如版本引用表述不严谨）照常修复。
 - **审查模式默认 light**：此处的 light/deep 指 **runner 的审查深度参数**，与 flow-dev `--mode` 正交——`--mode full` 只决定启用哪些检查点，不改变单次审查深度。不传 `--deep` 即 light，runner 自动注入前言框定为快速正交 sanity check（聚焦高/中严重度发现，不逐行 review、不穷举边界、不搜索所有领域）。仅在任务涉及架构/安全/数据契约等高风险变更、且 caller 判断需要逐领域详查时才传 `--deep`。
 - **无发现输出仅一行结论**：light 前言已约束审查模型——无高/中严重度发现时整份输出仅一行「未发现高严重度问题」，不罗列已验证角度、不复述验证过程/成功路径。主代理按结论行判读，无发现即直接推进，不要求审查模型补充验证叙述。
 - **超时默认 1800s，不要传 `--timeout 900`**：单模型审查建议内置超时 1800s，复杂审查实测可达 600s+，900s 余量不足曾导致超时降级。调用方一般不传 `--timeout`；如需覆盖，不应低于 1800。
-- `--effort` 默认 `normal`（单模型正交审查），需要多模型交叉时按映射表提升到 `max`/`ultra`。
+- `--effort` 默认 `normal`（单个异族模型审查），需要多模型交叉时按映射表提升到 `max`/`ultra`。
 - **code-review 检查点后台并行（仅 Slice 轮）**：以 Bash `run_in_background` 后台发起，发起点在 Step 5 顶部；等待期由主代理对下一 Slice 做只读调研（flow-mem 预搜索、代码与方案阅读，禁止写入），Step 6 用 TaskOutput 阻塞收集 JSON——外部执行的时间成本被调研窗口隐藏。其余三个文档检查点仍同步调用——其后无 Slice 调研对象，并行无收益。
-- **DevLoop 审查调用附 `--no-preamble`**：runner 的 light 前言（「快速 sanity check / 一行结论」）与 flow-code-review 结构化流程及 findings JSON 契约冲突，DevLoop 审查发起时必须跳过；文档类检查点不传（仍走 light 框定）。
+- **DevLoop 审查调用附 `--no-preamble`**：runner 的 light 前言（「快速 sanity check / 一行结论」）与 flow-code-review 结构化流程及 findings JSON 契约冲突，DevLoop 审查发起时必须跳过；文档类检查点不传——adversarial 前言（证伪+发散框定）由 runner 按 `--style adversarial` 自动注入，与文档类审查的盲区清单契约一致。
 
-四个检查点分别使用不同的任务描述（写入 prompt.md）与 `--slug`：
+四个检查点分别使用不同的任务描述（写入 prompt.md）、`--slug` 与审查风格：
 
-- 需求树拆解后：任务描述示例 `"<caller-model> 完成需求树拆解"`；`--slug` 示例 `<task-slug>-dissection`
-- UltraThoughts 后：任务描述示例 `"<caller-model> 完成 UltraThoughts 需求分析"`；`--slug` 示例 `<task-slug>-ultrathoughts`
-- grill-me 后：任务描述示例 `"<caller-model> 完成 grill-me 自问自答"`；`--slug` 示例 `<task-slug>-grill-me`
-- DevLoop 审查（code-review 检查点）：任务描述示例 `"<caller-model> 完成 Slice 开发"`；`--slug` 示例 `<task-slug>-code-review`；prompt 模板见下节
+- 需求树拆解后：任务描述示例 `"<caller-model> 完成需求树拆解"`；`--slug` 示例 `<task-slug>-dissection`；`--style adversarial`，prompt 按对抗发散框架拟写（见 `flow-agent/references/prompt-template.md`），陈述需求树规模与覆盖边界
+- UltraThoughts 后：任务描述示例 `"<caller-model> 完成 UltraThoughts 需求分析"`；`--slug` 示例 `<task-slug>-ultrathoughts`；`--style adversarial`，同上框架，陈述目标定义性属性与可证伪验证
+- grill-me 后：任务描述示例 `"<caller-model> 完成 grill-me 自问自答"`；`--slug` 示例 `<task-slug>-grill-me`；`--style adversarial`，同上框架，陈述决策清单与已权衡维度
+- DevLoop 审查（code-review 检查点）：任务描述示例 `"<caller-model> 完成 Slice 开发"`；`--slug` 示例 `<task-slug>-code-review`；风格 orthogonal（默认，不传 `--style`），prompt 模板见下节
 
 ## DevLoop 审查 prompt
 
@@ -122,7 +132,7 @@ flow-code-review --json --effort <档位> --base <base_ref>
 
 具体生成哪些 `review-<model>.md` 由 `--effort` 与 `--caller-model` 决定，选择原则固定：**审查模型必须与 caller 异族**（正交性是本协议的存在理由），同族模型的审查会共享 caller 的隐含假设。典型布局：
 
-- `normal`：单模型正交审查（一个与 caller 异族的模型）
+- `normal`：单异族模型审查（一个与 caller 异族的模型，风格 orthogonal 或 adversarial 均适用）
 - `max`：双模型交叉（caller 的首选异族 + 一个第三方族）
 - `ultra`：全部可用异族模型各审一份
 
