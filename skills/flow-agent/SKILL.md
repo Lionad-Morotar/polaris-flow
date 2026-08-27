@@ -1,14 +1,16 @@
 ---
 name: flow-agent
-description: 主动发起外部正交审查：调用者描述自己用什么模型做了什么，flow-agent 从正交视角启动一个或多个模型的快速外部检查
-argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--deep] [--no-preamble] [--timeout <seconds>] [--output-dir <dir>]
+description: 主动发起外部审查：调用者描述自己用什么模型做了什么，flow-agent 启动一个或多个异族模型执行快速检查——代码类产物走正交验证（默认），需求理解类产物走对抗发散审查（--style adversarial）
+argument-hint: <target> --task "<模型与内容描述>" --slug <slug> [--caller-model <model>] [--target-model <model|auto>] [--effort normal|max|ultra|fable] [--style orthogonal|adversarial] [--deep] [--no-preamble] [--timeout <seconds>] [--output-dir <dir>]
 metadata:
-  version: 0.1.0-alpha.3
+  version: 0.1.0-alpha.4
 ---
 
 ## 概念澄清
 
-`flow-agent` 是一个**被主代理调用的调度型 skill**：主代理说明自己用什么模型、做了什么内容，`flow-agent` 按规则选择外部异模型，并通过对应的 zsh launcher function 启动正交审查。主代理只负责发起调用和接收 JSON 汇总，**不执行具体的审查过程**。
+`flow-agent` 是一个**被主代理调用的调度型 skill**：主代理说明自己用什么模型、做了什么内容，`flow-agent` 按规则选择外部异模型，并通过对应的 zsh launcher function 启动审查。主代理只负责发起调用和接收 JSON 汇总，**不执行具体的审查过程**。
+
+审查有两种风格（`--style`）：**orthogonal（正交验证，默认）**——检查已做的对不对，只报真正造成故障的发现，适用代码类产物；**adversarial（对抗发散）**——证伪关键主张、发散枚举遗漏象限，适用需求理解类产物（需求树拆解 / UltraThoughts / 决策台账：无客观对错，风险形态是盲区与理解偏差，验证型检查会把它压成低信息量阴性结论）。两风格共用模型选择与降级链路，差异在前言框定与输出契约。
 
 审查产物落到 `docs/reviews/<slug>/prompt.md` 与各模型的 `review-<model>.md`。
 
@@ -35,6 +37,7 @@ metadata:
 - `--effort`（默认 `normal`）：审查强度：`normal`（启动一个与 caller 不同的模型，按映射表选择）/ `max`（normal + deepseek）/ `ultra`（所有非 caller 模型）/ `fable`（所有模型，包括 caller 模型，用于获得最大正交覆盖）
 - `--deep`（默认 关闭（light））：审查模式。默认 **light**：注入前言框定为快速正交 sanity check（聚焦会真正造成故障的高/中严重度发现，不逐行 review、不穷举边界、不搜索所有领域；无高/中严重度发现时整份输出仅一行结论，禁止罗列已验证角度或复述验证过程/成功路径；见 `references/prompt-template.md`）。`--deep` 切换为深入审查，保留调用方原始 prompt 不注入前言，并把 kimi 视角升级为 `kimi-k3-full`（全量 k3·1M 上下文）；light 模式 kimi 视角用 `kimi-k3`（k3-256k，强度等同、消耗更低）。旧名 `--full` 已移除：与 flow-dev `--mode full` 同名异义区隔，传入时报错并提示新写法
 - `--no-preamble`（默认 关闭）：跳过 light 前言注入，但不改变其余 light 行为（校验仍非空即过、kimi 视角不升级）。用于**流程驱动审查**：调用方 prompt 已完整定义审查流程与输出契约时（如 flow-dev DevLoop 让外部模型按 flow-code-review 流程执行并输出 findings JSON），前言的「快速 sanity check / 一行结论」框定与之冲突
+- `--style`（默认 `orthogonal`）：审查风格两档。`orthogonal`（正交验证）：light 前言框定为快速 sanity check，只报高/中严重度故障发现，适用代码类产物；`adversarial`（对抗发散）：前言框定为证伪+发散——对每项关键主张构造能证伪它的具体场景、从产出未覆盖的视角枚举遗漏象限，输出按「视角/象限 → 遗漏或偏差描述 → 建议证伪或补齐路径」组织，适用需求理解类产物（需求树拆解 / UltraThoughts / 决策台账）。风格只切换前言与输出契约，模型选择、effort、`--deep` 深度维度均不受影响；与 `--deep` / `--no-preamble` 组合时不注入前言（风格仅作 JSON 记录），调用方 prompt 需自带风格定义
 - `--timeout`（默认 `1800`）：单模型审查超时秒数。一般无需覆盖；如需覆盖不应低于 1800（复杂审查实测可达 600s+）
 - `--output-dir`（必填）：产物根目录，例如 `<working-dir>/docs/reviews`
 
@@ -64,6 +67,7 @@ metadata:
    - [ ] 确认 `--task`、`--slug`、`--output-dir` 已提供；
    - [ ] 若 `--caller-model` 未提供，从 `--task` 文本中识别模型名；
    - [ ] 确认 `--effort` 属于 `normal|max|ultra|fable`；
+   - [ ] 确认 `--style` 属于 `orthogonal|adversarial`；
    - [ ] 确认 `--target-model` 为 `auto` 或支持的模型名；
    - [ ] 确认 `--output-dir` 目录存在，不存在则创建；
    - [ ] 若 `--target-model` 显式指定且等于 `--caller-model`（或与 caller 同族：`kimi-k3`/`kimi-k3-full` 互为同族，`glm-5.3`/`glm-5.3-flash` 互为同族），拒绝执行并返回错误；
@@ -81,8 +85,9 @@ metadata:
    - [ ] 记录每个模型的 `target_model` 与首选 `launcher`。
 
 4. **准备 prompt**
-   - [ ] 读取 `references/prompt-template.md` 通用框架；
+   - [ ] 读取 `references/prompt-template.md` 通用框架（orthogonal）或对抗发散框架（adversarial）；
    - [ ] 注入 `--task` 描述与 `<target>` 内容；
+   - [ ] light 模式下按 `--style` 注入对应前言（orthogonal → light sanity check 框定；adversarial → 证伪+发散框定）；`--deep` / `--no-preamble` 不注入；
    - [ ] 把 prompt 写入 `<output-dir>/<slug>/prompt.md`（所有模型共用同一份 prompt）；
    - [ ] **调用每个目标模型前，将 prompt 中的 `<target-model>` 占位符替换为该模型的实际名称**（例如 `glm-5.3`、`deepseek-v4-flash`），避免模型自行推断。
 
@@ -108,6 +113,7 @@ metadata:
        "task": "<task-description>",
        "caller_model": "glm-5.3|glm-5.3-flash|kimi-k3|qwen-3.8-max|deepseek-v4-flash|minimax-m3",
        "effort": "normal|max|ultra|fable",
+       "style": "orthogonal|adversarial",
        "reviews": [
          {
            "target_model": "kimi-k3",

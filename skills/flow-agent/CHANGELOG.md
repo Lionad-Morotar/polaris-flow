@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-08-27
+
+- 新增 `--style orthogonal|adversarial`（默认 orthogonal）：审查风格与深度（`--deep`）、流程驱动（`--no-preamble`）正交。adversarial 服务需求理解类产物（需求树拆解 / UltraThoughts / 决策台账）——无客观对错、风险形态是盲区与理解偏差，light sanity check 框定会压成低信息量阴性结论；前言切换为证伪（对每项关键主张构造能证伪它的具体场景）+ 发散（枚举未覆盖象限），输出契约改为「视角/象限 → 遗漏或偏差描述 → 建议证伪或补齐路径」，阴性契约保留一行结论形态（防对抗审查的假阳性凑数）；返回 JSON 增加 `style` 字段
+- 前言注入逻辑提取为 `apply_preamble` 纯函数并补 5 用例单测（风格分叉、deep/no-preamble 恒不注入、阴性契约锚点）
+
 ## [0.1.0-alpha.3] - 2026-08-26
 
 - 新增目标模型 `glm-5.3-flash`（`glm-4.7`(-flash) 的替代，综合能力略胜 `deepseek-v4-flash`，coding 与办公场景双修）：启动器链 `cgf`/`cgfwz`

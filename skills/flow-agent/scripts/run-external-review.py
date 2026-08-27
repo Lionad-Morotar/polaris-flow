@@ -143,6 +143,37 @@ LIGHT_PREAMBLE = (
     "需要深入审计请用 --deep 重新发起。\n\n"
 )
 
+# 对抗发散审查前言：--style adversarial 时注入（同样受 --deep / --no-preamble 抑制）。
+# 服务对象是需求理解类产物（需求树拆解 / UltraThoughts / 决策台账）——无客观对错，风险形态是
+# 盲区与理解偏差，验证型 sanity check 会把审查压成低信息量阴性结论。核心姿态：证伪（对抗）+
+# 视角枚举（发散）。措辞与 prompt-template.md 的对抗发散框架保持一致。
+# 阴性契约保留一行结论形态：对抗审查最大的失败模式是假阳性泛滥（编造盲区凑产出），
+# "确无可挑战点才输出一行"与 light 的"未发现才一行"同源，防凑数。
+ADVERSARIAL_PREAMBLE = (
+    "【审查模式：对抗发散审查】\n"
+    "你的任务是证伪与发散，不是复述与确认。默认假设被审查的产出存在理解偏差与覆盖盲区。\n"
+    "对抗：对每项关键主张问\"如果它是错的，会在哪里暴露\"——构造能证伪它的具体场景；"
+    "若其验证方式区分不了\"理解对/理解错\"，该验证本身就是缺陷。\n"
+    "发散：从产出未覆盖的视角枚举遗漏象限（不同用户角色、运维与部署、安全与权限、"
+    "时间与状态演化、极端规模、失败路径等，不限于所列），指出覆盖不足之处。\n"
+    "已被覆盖且验证成立的部分不复述确认，不纠缠实现细节，不为凑数罗列低价值观察。"
+    "每条发现按\"视角/象限 → 遗漏或偏差描述 → 建议证伪或补齐路径\"组织。"
+    "确无可挑战点时，整份输出仅一行\"未发现盲区或偏差\"。\n\n"
+)
+
+
+def apply_preamble(prompt: str, style: str, deep: bool, no_preamble: bool) -> str:
+    """按审查风格在调用方 prompt 之前注入前言；--deep / --no-preamble 保留原始 prompt。
+
+    orthogonal 注入 light sanity check 框定（抑制逐行深挖倾向），adversarial 注入
+    证伪+发散框定。前言只是风格的保底：流程驱动审查（--no-preamble）与逐领域详查
+    （--deep）由调用方 prompt 或深度语义全权定义，注入反而冲突。
+    """
+    if deep or no_preamble:
+        return prompt
+    preamble = ADVERSARIAL_PREAMBLE if style == "adversarial" else LIGHT_PREAMBLE
+    return preamble + prompt
+
 
 def build_launcher_cmd(launcher: str, prompt: str, flags: list[str] | None = None) -> list[str]:
     """构造 zsh 调用命令：source 加载 launcher function + CLI flag + -p prompt。
@@ -693,6 +724,14 @@ def main():
         help="跳过 light 前言注入（流程驱动审查用：调用方 prompt 完整定义审查流程与输出契约时，前言的"
         "「快速 sanity check / 一行结论」框定与之冲突）；校验仍按 light（非空即过），kimi 视角不升级",
     )
+    parser.add_argument(
+        "--style",
+        default="orthogonal",
+        choices=["orthogonal", "adversarial"],
+        help="审查风格：orthogonal（默认，验证型正交检查，适用代码类产物——只报真正造成故障的发现）；"
+        "adversarial（发散型对抗审查，适用需求理解类产物——需求树拆解/UltraThoughts/决策台账，"
+        "证伪主张 + 发散枚举遗漏象限，前言与输出契约随之切换）",
+    )
     # 旧 flag 迁移提示:--full 已改名 --deep(与 flow-dev --mode full 同名异义区隔),传入即报错
     if "--full" in sys.argv:
         print("错误: --full 已移除,请改用 --deep(深入审查模式)", file=sys.stderr)
@@ -744,12 +783,10 @@ def main():
 
     prompt = prompt_file.read_text(encoding="utf-8")
 
-    # light 模式（默认）注入前言框定审查范围；--deep 与 --no-preamble 保留调用方原始 prompt 不注入。
-    # 写在调用方 prompt 之前，让审查模型先建立"快速 sanity check"的预期，抑制逐行深挖。
-    # --no-preamble 服务流程驱动审查（如 flow-dev DevLoop 让外部模型执行 flow-code-review 流程）：
-    # 调用方 prompt 自带流程与输出契约，前言的"一行结论"框定会与之冲突。
-    if not args.deep and not args.no_preamble:
-        prompt = LIGHT_PREAMBLE + prompt
+    # 前言注入见 apply_preamble 的 docstring：内容按 --style 分叉（orthogonal 走 light
+    # sanity check 框定，adversarial 走证伪+发散框定——需求理解类产物无客观对错，
+    # sanity check 框定会把它压成低信息量阴性结论）。
+    prompt = apply_preamble(prompt, args.style, args.deep, args.no_preamble)
 
     try:
         targets = select_targets(args.caller_model, args.effort, args.target_model, args.deep)
@@ -800,6 +837,7 @@ def main():
         "caller_model": args.caller_model,
         "effort": args.effort,
         "mode": "deep" if args.deep else "light",
+        "style": args.style,
         "no_preamble": args.no_preamble,
         "reviews": reviews,
     }
