@@ -128,6 +128,7 @@ fi
 - launcher 报 `_claude_run_with_version not found` 且产物 0 字节：launcher 版本分发逻辑的瞬时故障，不是 zsh function 环境损坏——删掉 0 字节产物后用原 launcher 直接重试即恢复（实证 91s 成功）；同族内一个备用被 kill、另一个报函数错先后出现也不代表整族不可用，同族备用逐一尝试即可。
 - 单 launcher 静默空产物形态（exit=0 无任何报错但产物 0 字节）：脚本产物校验失败后会自动 fallback 同族备用 launcher（实证 565s 备用成功），无需手工删文件干预，让脚本走完自动降级链。
 - 多族并发同症（第二族仍空产物或 probe 超时）是基础设施面故障（额度耗尽、服务侧波动），不是逐族串行重试能解决的——脚本自动降级链照走，调用方（flow-dev）按外部审查协议记 blocker 转 blocked 留现场，勿逐族空耗。
+- 非空产物但内容是 API 错误文本（如 `Failed to authenticate. API Error: 403 You've reached your concurrent request limit`）：模型进程把限流报错当最终输出写出，exit=0、产物校验通过、runner 报 success——是假成功，不是通过。调用方收集产物时先扫首行/API Error 关键词，命中即按真实失败处置：状态记 failed 附错误文本，等待或换时段重试（实证间隔约 3 分钟后重试成功）。
 
 该模型所有启动器都失败：
 - 该模型 `status = degraded`；
