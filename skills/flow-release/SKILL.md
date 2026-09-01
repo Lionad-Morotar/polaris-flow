@@ -166,6 +166,7 @@ node scripts/preflight.mjs --json     # JSON 输出，供自动化流程消费
 - [ ] 非终端用户可见的变更已标记 `[internal]`：维护脚本、CI、内部工具、模式生成等不向最终用户暴露的条目，前缀 `[internal]`
   - 示例：`- [internal] watch-patterns 重启时通过持久化 hash 缓存避免全量重新上传`
 - [ ] 从未发布过的历史版本段已收敛合并：按发布目标判定首发——npm 包看 `npm view <pkg> version` 是否 404，VSCode 扩展看是否有 `v*` git tag。未发布时其 0.x 历史段对终端用户不可见，应合并为首发段（用户只看最终形态，"相对旧实现的优化""修复了未发布版本的 bug"一类描述无意义）
+- [ ] CHANGELOG 断档已收敛：版本已发布但无对应版本段时，不回填中间版本段，断档区间（含 prerelease 系列）变更全部并入当前发布段（见 changelog-format.md「断档收敛」）
 - [ ] **用户已确认 Changelog 内容**
 
 ## 4. 版本号升级
