@@ -33,7 +33,8 @@ metadata:
 4. 版本号升级   
 5. Git 提交& 标签        
 6. 首次发布检测&准备    
-7. Postflight (--post 校验)  
+7. 执行发布（prerelease 代理直发，stable 交还用户）
+8. Postflight (--post 校验)  
 
 ## 0. Preflight 机械检查
 
@@ -41,7 +42,7 @@ metadata:
 
 ```bash
 node scripts/preflight.mjs            # 发版前检查（cwd 默认为项目根目录，可用 --cwd 指定）
-node scripts/preflight.mjs --post     # 发布后校验（第 7 步）
+node scripts/preflight.mjs --post     # 发布后校验（第 8 步）
 node scripts/preflight.mjs --json     # JSON 输出，供自动化流程消费
 ```
 
@@ -279,6 +280,15 @@ npx skills add https://github.com/<username>/<repo>/tree/main/path/to/skill
 
 npm registry 检查与 publishConfig 要求均不适用（npm 上存在同名无关包时，查到的版本号也是误导）。
 
+## 7. 执行发布：prerelease 代理直发，stable 交还用户
+
+前置（bump / Changelog / commit / tag / 首发准备）全部完成后，按发布通道分流执行真正的发布动作——**不要停在 commit + tag 回头请示用户**：
+
+- **prerelease**（版本号含 `-`，如 alpha/beta/rc；dist-tag 非 latest）：代理直接执行 `pnpm release` 发布，**无需等用户确认**——npm token 有发布权限；prerelease 不移动 latest 指针，消费方须显式锁定版本才可达，试错成本低。发布成功后进入第 8 步 Postflight 校验。
+- **stable（latest）**：npm 账号开启 auth-and-writes 2FA 时，非交互 publish 报 `ERR_PNPM_OTP_NON_INTERACTIVE`——OTP 只能用户现场输入，代理无法代办；且 latest 指针移动即影响全量用户。流程止于 commit + tag，提示用户交互执行 `! pnpm release`（dry-run 不受影响，代理可照常跑完验证）。多包逐包 OTP 与 token 绕行方案见 [release-script](./references/release-script.md)。
+
+非 npm 发布目标：skill 包 / skill monorepo / CC 插件「推送即发布」（第 5 步的 `git push --tags` 即完成分发），本步无额外动作；VSCode 扩展把 `pnpm release` 换成 vsce 路径，通道分流原则相同。
+
 ## 发布脚本约定（pnpm release，必备）
 
 **如果项目没有 pnpm script `release`，应当补充**——发布入口必须收敛为一条命令，不允许依赖操作者记忆多步顺序。
@@ -339,13 +349,6 @@ Why 不能指望"全局 registry 正好是官方源"：开发者常把全局 reg
 
 **dry-run 不展示文件清单，tarball 必须实测**：`pnpm publish --dry-run` 只输出 `Skip publishing` 的 SKIP 行，打包产物是否完整完全不可见——打包工具链 silent 丢文件（如 pnpm 12 alpha 在包内无 `.npmignore` 时回退套用根 `.gitignore` 清空 `files` 白名单内的 dist 产物，仅剩 main + README + package.json）只有实测 tarball 才能拦截。templates/release.mjs 的 dry-run 路径已内置 tarball 实测（逐包 `pnpm pack` 后核对文件数 > 3 且 tarball 内无 `workspace:*` 残留），单包项目自定义 release 脚本时应照搬该检查。
 
-### 正式发布（npm 包）：prerelease 代理直发，stable 留给用户
-
-按发布通道分流：
-
-- **prerelease**（版本号含 `-`，如 alpha/beta/rc；dist-tag 非 latest）：前置（bump/changelog/tag）完成后代理直接执行 `pnpm release` 发布，无需等用户确认——npm token 有发布权限；prerelease 不移动 latest 指针，消费方须显式锁定版本才可达，试错成本低。
-- **stable（latest）**：npm 账号开启 auth-and-writes 2FA 时，非交互 publish 报 `ERR_PNPM_OTP_NON_INTERACTIVE`——OTP 只能用户现场输入，代理无法代办；且 latest 指针移动即影响全量用户。流程止于 commit + tag，由用户交互执行 `! pnpm release`（dry-run 不受影响，代理可照常跑完验证）。多包逐包 OTP 与 token 绕行方案见 [release-script](./references/release-script.md)。
-
 ## 常见工具选择
 
 | 场景 | 推荐工具 |
@@ -366,6 +369,7 @@ Why 不能指望"全局 registry 正好是官方源"：开发者常把全局 reg
 - [ ] **用户已确认 Changelog 内容**
 - [ ] prerelease 分支策略已遵守（1.4）：alpha 在当前分支发版，stable 才合并发版分支后打 tag
 - [ ] Git commit / tag 信息符合约定（`release: v<版本号>`；skill monorepo 为 `chore(<skill>): v<版本号>` + `<skill>@<版本号>`）
+- [ ] 发布通道分流已执行（第 7 步）：prerelease 由代理直接 `pnpm release` 直发；stable 止于 commit + tag，交还用户 `! pnpm release` 交互输 OTP
 
 ### 发布后人工判读（基于 `preflight.mjs --post` 输出）
 
