@@ -34,9 +34,11 @@
 按依赖顺序执行（matt-pocock 会往 A 写入内容，故必须在骨架之后；各步骤生成的文档最后进入 A 的表格）：
 
 1. **gsd-docs**
-   * 不存在：派发子代理执行 `gsd-map-codebase`，明确要求——生成的 `.planning/codebase/*.md` 必须使用中文撰写；技能执行完毕后检查文档语言，对非中文内容兜底翻译；**禁止 git 提交**
+   * 不存在：派发子代理执行 `gsd-map-codebase`，明确要求——生成的 `.planning/codebase/*.md` 必须使用中文撰写；技能执行完毕后检查文档语言，对非中文内容兜底翻译；**禁止 git 提交**；**禁止 checkout/建分支与运行包管理器安装**（实测 mapper 会自行 checkout 新分支并 `pnpm install`——依赖信息只读 package.json/lockfile 即可，install 会重排 node_modules 并留下 lockfile/manifest 副作用）
    * 已存在：读 `~/.claude/skills/flow-docs/SKILL.md` 按其 Workflow 执行（检查 → 过期则增量更新，默认模式即够，无需 flag）
    * `meta.yaml` 缺失降级：文档在盘但 `.planning/meta.yaml` 缺失时 flow-docs preflight 拦「非 GSD 项目」——勿降级 gsd-map-codebase 全量重建，bootstrap 恢复：`git log --diff-filter=A -- .planning/codebase/` 定位文档基线提交写入 `from`，按 flow-docs gsd-sync.md 指纹协议算当前文档指纹写入 `hash`，再以 `--force` 触发增量同步（bootstrap 后 hash 一致、isOld 恒 false，不 --force 不会执行）
+   * `meta.yaml` 残缺补齐：mapper 合成的 meta.yaml 可能缺 flow-docs 指纹块（实测：本地 GSD 无 meta.yaml 模板时按 init context 自造格式）——已有 `codebase.hash/from/updated_at` 则不动；缺失时按 gsd-sync.md 协议手工补齐：hash 为 `.planning/codebase/*.md` 按固定字母序拼接内容的 sha256，from 取 `git rev-parse --short HEAD`（映射锚点），不补则下次 flow-docs 误判过期
+   * mapper 完成后主代理后验检查（mapper 可能越界而不自知）：`git branch --show-current` 应仍为派发时分支、`git status --short` 不应出现 lockfile/workspace 清单类新文件。实测偏差的恢复路径：`git checkout <原分支> && git merge --ff-only <偏差分支>` 带回提交（偏差分支保留不删）；按仓库实际包管理器重装依赖恢复 node_modules 布局；顶层 symlink 计数为 0 后删 `node_modules/.pnpm` 孤儿存储
    * 指纹一致性：任何对 `.planning/codebase/*.md` 的手工修改（含主代理补漏）之后必须重算指纹写回 `meta.yaml.hash`，否则下次 flow-docs 误判文档过期
    * `gsd-sdk` 降级：本机 `gsd-sdk` 可能是 fnm wrapper（仅 `run`/`auto`/`init`，无 `query` 子命令）——workflow 里 `gsd-sdk query init.map-codebase` / `query agent-skills` 失败时手动填充 init context：`mapper_model` 省略（Agent 工具继承会话模型）、`date` 取当日、`AGENT_SKILLS_MAPPER` 尾部注入缺失不阻塞（mapper agent 自带模板），汇报中如实标注
    * 等 mapper 完成用 task-notification 而非 `TaskOutput block=true` 轮询——后者超时回吐的是子代理 JSONL 转录的大段截断（4 个并行各吐一坨）；GSD workflow 自带的 commit 步骤按上方"禁止 git 提交"约束跳过，入库由本手册 Step 4 垂直切片统一收尾
