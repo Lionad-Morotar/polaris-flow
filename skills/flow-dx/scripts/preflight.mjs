@@ -68,6 +68,7 @@ const CONDITIONAL_SKILLS = [
 const result = {
   version: 1,
   repoRoot: null,
+  git: null, // 项目归属与工作分支探测（见 probeGit）
   stack: null,
   agentsMd: null,
   claudeMd: null,
@@ -180,6 +181,107 @@ function firstExisting(repoRoot, candidates) {
   return null;
 }
 
+/**
+ * 项目归属与工作分支探测（只读，不切分支——动作由 SKILL.md Workflow 步 0 执行）。
+ *
+ * 非本人项目（典型：clone 下来的开源仓库）不把改动落默认分支，而是落 dev 工作
+ * 分支：dev 存在即用（上游推进后 merge 默认分支进 dev），缺失则由 Workflow
+ * `checkout -b` 创建。归属判定是廉价启发式，三项任一命中即视为本人项目：
+ *   1. 无远端（纯本地仓库视为本人项目）
+ *   2. origin owner 大小写不敏感命中本地身份（user.name / user.email / email 本地段）
+ *   3. 近 50 个 first-parent 提交的作者/提交者身份占比 ≥ 50%
+ * fresh clone 的他人仓库三项皆不命中 → owned=false。user.name 常是显示名
+ * （如「仿生狮子」）而非 GitHub 登录名，所以 owner 匹配要同时试 email 本地段；
+ * 作者占比兜底覆盖「自己的仓库但显示名与登录名都不同」的场景。
+ */
+function probeGit(repoRoot) {
+  const branch = tryExec(`git rev-parse --abbrev-ref HEAD`, repoRoot);
+  const remoteUrl = tryExec(`git remote get-url origin`, repoRoot);
+  let remote = null;
+  if (remoteUrl) {
+    // 同时吃 https（host/owner/repo(.git)）与 ssh（git@host:owner/repo(.git)）形态
+    const m = remoteUrl.match(/(?:^|[:/])([^/:]+)\/([^/]+?)(?:\.git)?\/*$/);
+    if (m) {
+      const host = remoteUrl.includes("@")
+        ? (remoteUrl.split("@")[1] ?? "").split(":")[0] || null
+        : remoteUrl.split("/")[2] ?? null;
+      remote = { host, owner: m[1], repo: m[2], url: remoteUrl };
+    }
+  }
+
+  const name = tryExec(`git config user.name`, repoRoot);
+  const email = tryExec(`git config user.email`, repoRoot);
+  const identityTokens = new Set();
+  for (const token of [name, email, email?.split("@")[0]]) {
+    if (token) identityTokens.add(token.trim().toLowerCase());
+  }
+  const ownerMatch =
+    remote !== null && identityTokens.has(remote.owner.toLowerCase());
+
+  let authorShare = null;
+  const logText = tryExec(
+    `git log -n 50 --first-parent --format=%an%x09%ae%x09%ce`,
+    repoRoot,
+  );
+  if (logText !== null) {
+    const rows = logText.split("\n").filter(Boolean);
+    let hits = 0;
+    for (const row of rows) {
+      if (row.split("\t").some((t) => identityTokens.has(t.trim().toLowerCase())))
+        hits++;
+    }
+    authorShare = rows.length > 0 ? hits / rows.length : null;
+  }
+
+  const owned =
+    remote === null || ownerMatch || (authorShare ?? 0) >= 0.5;
+
+  // 默认分支：优先 origin/HEAD 实际指向，退回 main/master 本地存在性
+  const originHead = tryExec(
+    `git symbolic-ref --short refs/remotes/origin/HEAD`,
+    repoRoot,
+  );
+  const defaultBranch =
+    originHead?.replace(/^origin\//, "") ??
+    (tryExec(`git rev-parse --verify --quiet main`, repoRoot) !== null
+      ? "main"
+      : tryExec(`git rev-parse --verify --quiet master`, repoRoot) !== null
+        ? "master"
+        : null);
+
+  const devExists =
+    tryExec(`git rev-parse --verify --quiet refs/heads/dev`, repoRoot) !== null;
+  const onDefault = defaultBranch !== null && branch === defaultBranch;
+  // dev 严格落后默认分支时可快进集成上游（用户习惯：dev 吸收远端 main 改动）
+  let devBehindDefault = false;
+  if (devExists && defaultBranch !== null) {
+    devBehindDefault =
+      tryExec(
+        `git merge-base --is-ancestor dev refs/heads/${defaultBranch}`,
+        repoRoot,
+      ) !== null &&
+      tryExec(`git rev-parse refs/heads/dev`, repoRoot) !==
+        tryExec(`git rev-parse refs/heads/${defaultBranch}`, repoRoot);
+  }
+
+  return {
+    branch,
+    defaultBranch,
+    onDefault,
+    remote,
+    identity: { name, email },
+    ownerMatch,
+    authorShare,
+    owned,
+    workBranch: {
+      name: "dev",
+      exists: devExists,
+      current: branch === "dev",
+      behindDefault: devBehindDefault,
+    },
+  };
+}
+
 // ── 盘点主流程 ──────────────────────────────────────────────────────────────
 
 const repoRoot = tryExec("git rev-parse --show-toplevel", targetDir);
@@ -190,6 +292,7 @@ if (!repoRoot) {
   process.exit(1);
 }
 result.repoRoot = repoRoot;
+result.git = probeGit(repoRoot);
 
 const rootEntries = readdirSync(repoRoot);
 

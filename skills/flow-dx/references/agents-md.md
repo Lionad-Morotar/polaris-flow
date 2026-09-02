@@ -60,6 +60,7 @@
 
 ### 4. 提交
 
+- [ ] 提交落点：SKILL.md Workflow 步 0 已按 `git.owned` 归一化工作分支（他人项目即 `owned=false` 一律落 dev，本人项目落当前分支），本步骤直接提交到当前分支，勿再自行切分支；若单独调起本手册绕过了步 0，先按步 0 规则自行归一化再提交
 - [ ] 提交前 ignore 检查：若盘点 `gitignoreDocsAgents.agentsSafe` 为 false（已前置检出），需先为例外——把 `.gitignore` 中的 `docs/` 改写为 `docs/*` 并追加 `!docs/agents/`，确保 AI 基建文档入库而运行文档仍不入库；`.planning/` 同理需确认未被忽略（`git check-ignore` 验证）
 - [ ] 垂直切片依赖顺序（按入库策略调整）：
   * `gsdDocs.ignored=false`：先提交 gsd-docs（被引用方），再提交挂载方（CLAUDE.md 或 Domain Docs），避免中间态死链

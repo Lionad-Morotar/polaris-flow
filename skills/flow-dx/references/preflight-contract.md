@@ -17,6 +17,17 @@ node preflight.mjs --skip devHub <目标目录>
 {
   "version": 1,
   "repoRoot": "<abs path>",
+  "git": {
+    "branch": "dev",
+    "defaultBranch": "main",
+    "onDefault": false,
+    "remote": { "host": "github.com", "owner": "yetone", "repo": "cumora", "url": "https://github.com/yetone/cumora.git" },
+    "identity": { "name": "仿生狮子", "email": "you@example.com" },
+    "ownerMatch": false,
+    "authorShare": 0.06,
+    "owned": false,
+    "workBranch": { "name": "dev", "exists": true, "current": true, "behindDefault": false }
+  },
   "stack": { "isNuxt": true, "nuxtConfig": "nuxt.config.ts" },
   "agentsMd": {
     "exists": true,
@@ -102,10 +113,17 @@ node preflight.mjs --skip devHub <目标目录>
 * `fileName` 按真实文件名回报（大小写不敏感匹配 `Agents.md`/`AGENTS.md` 变体，返回磁盘上的实际名字）；文件不存在时 `exists` 为 false，其余字段为 null/false
 * `ready` 三态：`true`（就绪）/ `false`（有缺口，待收敛）/ `'skip'`（被 `--skip` 主动跳过，验证阶段不要求收敛）。顶层 `skipped` 数组记录所有被跳过的切片名
 
+项目归属与工作分支（`git`）：
+
+* 目的：识别「clone 的他人项目」（如开源仓库），把本人改动收敛到 dev 工作分支而非默认分支——dev 承载全部个人改动，上游推进后 merge 默认分支进 dev
+* `owned` 启发式（任一命中即本人项目）：无 origin remote（纯本地仓库视为本人项目）；origin owner 大小写不敏感命中本地身份（`user.name` / `user.email` / email 本地段——user.name 常是显示名而非登录名，所以 email 本地段必须参与匹配）；近 50 个 first-parent 提交的作者/提交者身份占比 `authorShare` ≥ 0.5（兜底「自己的仓库但显示名与登录名都不匹配」的场景，fresh clone 的他人仓库为 0 或接近 0）。判定不出时宁可视为本人项目——只有 `owned=false` 才会动分支
+* `defaultBranch`：origin/HEAD 的实际指向，退回 main/master 本地存在性；`onDefault` = 当前分支即默认分支。 detached HEAD 时 `onDefault` 为 false，Workflow 不动分支
+* `workBranch.behindDefault`：dev 存在且是 defaultBranch 的**严格祖先**——可 `git merge --ff-only` 无冲突集成上游；diverged 时为 false，Workflow 不做合并、报告中提示人工处理
+* 本探测**只读**：不 checkout、不建分支、不合并——分支动作由 SKILL.md Workflow 步 0 按这些字段执行
+
 Agents.md 切片：
 
-* A/C 互链就绪的判定规则：一者 `isSymlink: false`（真实文件）、另一者 `isSymlink: true` 且 `linkTarget` 指向对方。两者都是真实文件时视为未就绪（内容可能漂移），骨架步骤负责收敛
-* `claudeLocalMd`：CC 官方本地 memory 层（项目根 `CLAUDE.local.md`，与 CLAUDE.md 一同加载，个人不入库）。`gsdDocs.ignored=true` 时，文档引用应挂这里而非 CLAUDE.md，避免团队共享文件出现死链
+* A/C 互链就绪的判定规则：一者 `isSymlink: false`（真实文件）、另一者 `isSymlink: true` 且 `linkTarget` 指向对方。两者都是真实文件时视为未就绪（内容可能漂移），骨架步骤负责收敛* `claudeLocalMd`：CC 官方本地 memory 层（项目根 `CLAUDE.local.md`，与 CLAUDE.md 一同加载，个人不入库）。`gsdDocs.ignored=true` 时，文档引用应挂这里而非 CLAUDE.md，避免团队共享文件出现死链
 * `gsdDocs.exists` 仅在 `.planning/codebase/` 内有 ≥1 个 `.md` 时为 true
 * `gsdDocs.ignored`：`git check-ignore` 实测 `.planning/codebase/STACK.md` 是否被项目或全局 ignore 命中。**不预设入库策略**——消费方（agents-md.md）据此选择挂载目标：`ignored=true` → `CLAUDE.local.md`（本地）；`ignored=false` → `CLAUDE.md`（团队共享）。check-ignore 只匹配规则不要求文件存在，盘点期即可判定
 * `gsdDocs.unindexed`：`.planning/codebase/` 下实际存在、却未被挂载索引（`ignored=false` → `CLAUDE.md`，否则 `CLAUDE.local.md`）以 `.planning/codebase/<name>.md` 形式引用的文档清单。非空即**索引漂移**——文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），Agents.md 切片 Step 3 应逐行补登。目录为空或无索引文件时为 `[]`

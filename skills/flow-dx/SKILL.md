@@ -114,6 +114,7 @@ skill 目录 `templates/` 下提供以下参考模板：dev 模板供 `flow-dev`
      * Dev Hub 切片缺口：`devHub.applicable` 为 true 且 `devHub.ready` 为 false（根与 workspace 子包均无 Nuxt 站点包时自动不适用）
      * Lint 基建切片缺口：`lintInfra.applicable` 为 true 且 `lintInfra.ready` 为 false（无 Tailwind + flat config 自动不适用）
      * Pages 部署切片缺口：`pagesDeploy.applicable` 为 true 且 `pagesDeploy.ready` 为 false（非 GitHub 仓库或无 Nuxt 包自动不适用）
+   - [ ] 工作分支归一化（先于一切提交动作；缺口清单为空则跳过，不动分支）。`git.owned=false` 即他人项目（如 clone 的开源仓库），本人改动一律落 dev 工作分支：`git.onDefault` 为 true 时——`workBranch.exists` 为 true 则 `git checkout dev`（`behindDefault` 为 true 先 `git merge --ff-only <defaultBranch>` 集成上游，diverged 则不合并、报告提示人工处理）；exists 为 false 则 `git checkout -b dev`。`owned=true`（本人项目）或已不在默认分支（用户自选的分支，予以尊重）时不动。dev 的定位：承载本人全部改动的集成分支，上游推进后由用户 merge 默认分支进 dev；后续所有切片的提交自然落 dev，勿再单独切分支
 
 1. 入口范围确认（全程唯一一次 Ask）
    - [ ] 若 ARGUMENTS 含明确任务指令（如指定切片/增强/目标文件）：视为 Q1/Q2 预设回答，跳过 Ask 直接执行；仅当 ARGUMENTS 模糊或 preflight 缺口超出 ARGUMENTS 范围时才发起 Ask
