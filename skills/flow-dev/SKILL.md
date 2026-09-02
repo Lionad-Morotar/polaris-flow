@@ -330,15 +330,14 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
      - [ ] 在最终报告末尾追加 worktree 收尾决策
      - [ ] **若 `--stage`**：无已提交改动即无可合并内容——跳过合并询问，强制 keep 分支；收尾决策写明原因与后续步骤（手动提交后把 `<worktree-branch>` 合并回 `<original-branch>` 再清理，流程见 `references/worktree-mode.md`）
      - [ ] 用户回复 yes（合并并清理）：
-       - [ ] 确认 `<working-dir>` 中工作区干净（`git status --porcelain` 无输出）——逐 Slice 提交后正常路径天然满足；若有残留（blocked Slice 未提交改动），停止合并流程、保留 worktree、终端标注残留处置（提交后重走合并或手动处理），禁止使用 `ExitWorktree` remove 丢失残留
-       - [ ] **docs 产物接回主仓**：产物被 git 忽略、不随 merge 进入 `<original-branch>`，清理 worktree 前按 `references/worktree-mode.md`「docs 产物接回主仓」把 `<working-dir>/docs/` 下存在的产物目录复制回 `<repo-root>`，否则随 worktree 删除丢失
+       - [ ] **收尾守门（postflight）**：运行 `node ~/.claude/skills/flow-dev/scripts/postflight.mjs <task-slug> --apply`——幂等接回 docs 产物到 `<repo-root>` 并校验（产物一致性 / 切片提交在祖先链 / 工作区无残留）。exit 非 0 时停止合并流程、保留 worktree，按 failures 清单处置后重跑（工作区残留时禁止使用 `ExitWorktree` remove 丢失残留；产物被 git 忽略不随 merge 走，跳过接回直接清理会随 worktree 删除丢失）
        - [ ] 切回 `<repo-root>` 的 `<original-branch>`，用 `git branch --show-current` 重新确认
        - [ ] 执行 `git merge --no-ff <worktree-branch>`
        - [ ] **若冲突**：停止、不自动解决、写 `merge-conflict` blocker、phase → `merge-conflict`、保留 worktree（产物仍在 worktree 内，冲突解决后可重走接回与清理）
        - [ ] 若合并成功，使用 `ExitWorktree` 的 `action: "remove"` 退出并清理 worktree
      - [ ] 用户回复 keep 或未回复：
        - [ ] 使用 `ExitWorktree` 的 `action: "keep"`，仅恢复原始 cwd
-       - [ ] 保留 worktree 目录与分支供手动 review；建议同样执行 docs 产物接回（最终报告等以 `<repo-root>` 为单一查看入口），不接回时收尾决策注明产物仍在 worktree、未来清理会丢失
+       - [ ] 保留 worktree 目录与分支供手动 review；建议同样跑 postflight `--apply` 接回产物（最终报告等以 `<repo-root>` 为单一查看入口），不接回时收尾决策注明产物仍在 worktree、未来清理会丢失
    - [ ] 更新 `state.json`：phase → `done`/`merge-conflict`/`blocked`，`end_time`
 
 ## BAN

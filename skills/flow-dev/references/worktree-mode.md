@@ -31,29 +31,28 @@
 - 默认在最终报告后询问：是否将当前 worktree 的改动合并回 `<original-branch>` 并清理 worktree，以便在原分支 review。
 - 若用户同意：
   1. 在 `<working-dir>` 中确保所有改动已提交（逐 Slice 提交后正常路径天然满足；blocked Slice 有未提交残留时停止合并清理，先处置残留）。
-  2. **docs 产物接回主仓**（见下节）：产物被 git 忽略、不会随 merge 进入 `<original-branch>`，清理 worktree 前必须先复制回 `<repo-root>`，否则随 worktree 删除丢失。
+  2. **收尾守门（postflight）**：运行 `node ~/.claude/skills/flow-dev/scripts/postflight.mjs <task-slug> --apply`——幂等接回 docs 产物到 `<repo-root>` 并校验（产物一致性 / 切片提交在祖先链 / 工作区无残留），exit 非 0 时停止合并清理、按 failures 清单处置后重跑。产物被 git 忽略、不会随 merge 进入 `<original-branch>`，跳过本步直接清理 worktree 会静默丢失产物（有前科）。
   3. 切回 `<repo-root>` 的 `<original-branch>`。
   4. 执行 `git merge --no-ff <worktree-branch>`（trunk-based 项目按 CLAUDE.md 使用 `--no-ff`）。
   5. 使用 `ExitWorktree` 的 `action: "remove"` 退出并清理 worktree。
 - 若用户选择保留：
   1. 使用 `ExitWorktree` 的 `action: "keep"`，仅恢复原始 cwd。
-  2. 保留 worktree 目录与分支供手动 review。建议同样执行 docs 产物接回（最终报告等产物以 `<repo-root>` 为单一查看入口）；不接回时收尾决策注明产物仍在 worktree、未来清理会丢失。
+  2. 保留 worktree 目录与分支供手动 review。建议同样跑 postflight `--apply` 接回产物（最终报告等产物以 `<repo-root>` 为单一查看入口）；不接回时收尾决策注明产物仍在 worktree、未来清理会丢失。
 - `--stage` 下不执行提交，无已提交改动可合并回 `<original-branch>`：跳过合并询问，强制保留分支（等同用户选择 keep），收尾决策注明后续步骤——手动按逐 Slice 提交计划提交后再执行上述合并流程。
 
 如需保留未提交改动，请选择 keep；此时再按 CLAUDE.md 的 quit worktree workflow 处理亦可。
 
-## docs 产物接回主仓
+## docs 产物接回主仓（postflight 守门）
 
-flow-dev 的产物（`docs/` 下八个子目录）被 git 忽略，merge 只带入已提交改动——worktree 清理时产物随之丢失。退出前把存在的产物目录复制回 `<repo-root>`：
+flow-dev 的产物（`docs/` 下八个子目录）被 git 忽略，merge 只带入已提交改动——worktree 清理时产物随之丢失。接回与校验统一由 postflight 脚本承载，禁止手工 for 循环复制（叙述步骤曾被跳过导致产物丢失）：
 
 ```bash
-for d in thoughts dissections decisions plans tdd qa reports reviews; do
-  [ -d "<working-dir>/docs/$d" ] && mkdir -p "<repo-root>/docs/$d" \
-    && cp -R "<working-dir>/docs/$d/." "<repo-root>/docs/$d/"
-done
+node ~/.claude/skills/flow-dev/scripts/postflight.mjs <task-slug> --apply
 ```
 
-产物文件均以 `<task-slug>` 命名（reviews 目录为 `<task-slug>-*`），跨 run 不冲突，重复执行幂等。只复制这八个子目录，不动 worktree 内项目自身的 docs（那是已提交改动，由 merge 带入）。`<run-dir>` 在 `~/.flow-dev/` 下，不受 worktree 清理影响，无需接回。
+`--apply` 先按 `<task-slug>` 前缀幂等复制产物到 `<repo-root>`（reviews 为 `<task-slug>-*` 目录内的单层文件枚举，跨 run 不冲突），再做四项校验：产物内容一致（sha256）、done 切片提交在 HEAD 祖先链、工作区无残留、phase 可收尾。exit 0 才允许进入 merge / 清理；不带 `--apply` 为纯校验（keep 收尾或审计复跑场景——worktree 已删时降级为主仓侧产物存在性自查，能识别「从未接回已丢失」）。`<run-dir>` 在 `~/.flow-dev/` 下，不受 worktree 清理影响，无需接回。
+
+keep 收尾同样建议跑一遍（纯校验即可）：不接回时收尾决策注明产物仍在 worktree、未来清理会丢失。
 
 ## 注意事项
 
