@@ -56,6 +56,14 @@ node preflight.mjs --skip devHub <目标目录>
   "gsdDocs": { "exists": true, "dir": "<abs path>", "files": ["STACK.md"], "ignored": false, "unindexed": [] },
   "productMd": { "exists": false, "path": "<abs path>" },
   "gitignoreDocsAgents": { "docsIgnored": false, "agentsSafe": true },
+  "pagesMd": {
+    "applicable": true,
+    "exists": false,
+    "pkgs": [
+      { "pkg": ".", "frontend": ["src/views", "src/router"], "cli": [] },
+      { "pkg": "packages/cli", "frontend": [], "cli": ["package.json#bin", "src/commands"] }
+    ]
+  },
   "devHub": {
     "applicable": true,
     "sitePkgs": ["playground"],
@@ -126,9 +134,10 @@ Agents.md 切片：
 * A/C 互链就绪的判定规则：一者 `isSymlink: false`（真实文件）、另一者 `isSymlink: true` 且 `linkTarget` 指向对方。两者都是真实文件时视为未就绪（内容可能漂移），骨架步骤负责收敛* `claudeLocalMd`：CC 官方本地 memory 层（项目根 `CLAUDE.local.md`，与 CLAUDE.md 一同加载，个人不入库）。`gsdDocs.ignored=true` 时，文档引用应挂这里而非 CLAUDE.md，避免团队共享文件出现死链
 * `gsdDocs.exists` 仅在 `.planning/codebase/` 内有 ≥1 个 `.md` 时为 true
 * `gsdDocs.ignored`：`git check-ignore` 实测 `.planning/codebase/STACK.md` 是否被项目或全局 ignore 命中。**不预设入库策略**——消费方（agents-md.md）据此选择挂载目标：`ignored=true` → `CLAUDE.local.md`（本地）；`ignored=false` → `CLAUDE.md`（团队共享）。check-ignore 只匹配规则不要求文件存在，盘点期即可判定
-* `gsdDocs.unindexed`：`.planning/codebase/` 下实际存在、却未被挂载索引（`ignored=false` → `CLAUDE.md`，否则 `CLAUDE.local.md`）以 `.planning/codebase/<name>.md` 形式引用的文档清单。非空即**索引漂移**——文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），Agents.md 切片 Step 3 应逐行补登。目录为空或无索引文件时为 `[]`
+* `gsdDocs.unindexed`：`.planning/codebase/` 下实际存在、却未被挂载索引（`ignored=false` → `CLAUDE.md`，否则 `CLAUDE.local.md`）以 `.planning/codebase/<name>.md` 形式引用的文档清单。非空即**索引漂移**——文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），Agents.md 切片 Step 4 应逐行补登。目录为空或无索引文件时为 `[]`
 * `gitignoreDocsAgents.agentsSafe` 为 false 表示 `docs/agents/domain.md` 被 .gitignore 忽略（常见于项目把 `docs/` 整目录排除，如 flow-dev 运行文档策略），需在提交前把 `docs/` 改写为 `docs/*` 并追加 `!docs/agents/` 例外；`docsIgnored` 为诊断字段，指示 `docs/` 自身是否被规则匹配。git check-ignore 只匹配规则不要求文件存在，盘点期即可判定，把入库隐患前置到范围确认阶段
 * `skills.*.available` 覆盖 `~/.claude/skills` 与插件 marketplaces/cache 两处来源。**技能可用性以此字段为唯一判定依据**：`available=false` 的增强项从范围确认（Q2）选项中剔除，消费方不得再 Read 技能文件做存在性确认——探测已由脚本一次完成，重复探测纯耗上下文
+* `pagesMd`：PAGES.md 页面入口清单（`.planning/codebase/PAGES.md`），Agents.md 切片的内建子产物。`applicable` = 根或 pnpm-workspace 任一子包有可枚举入口族——前端信号（`pages/`、`app/pages/`、`app/routes/`、`src/pages/`、`src/routes/`、`src/views/`、`src/router/` 或 `src/router.ts`；`app/` 单独不算，Nuxt 4 的 app/ 是源码根而非页面目录）或 CLI 信号（package.json `bin` 字段、`bin/`、`commands/`、`src/commands/`、`src/cli/`）；两族皆空的纯后端项目强行生成只会得到空表，故不适用。`pkgs` 回报每个命中包的信号明细（执行手册据此定提取来源）。`exists` 与 `applicable` 解耦：项目重构后不再适用但文件仍在盘时，消费方能区分「待生成」与「残留待清理」。**无 `ready` 字段、不进 `--skip` 三态机制**——PAGES.md 不是独立切片，就绪收敛由 Agents.md 切片整体判定（`applicable=true` 且 `exists=false` 即缺口）；索引完整性由 `gsdDocs.unindexed` 天然覆盖（PAGES.md 在 `.planning/codebase/` 下，在盘未进索引即被漂移检测捕获），本字段不重复探测
 
 Dev Hub 切片：
 

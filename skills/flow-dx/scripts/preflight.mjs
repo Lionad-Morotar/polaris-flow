@@ -23,6 +23,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync } from "
 import { homedir } from "node:os";
 import path from "node:path";
 import { probeLintInfra } from "./probes/lint-infra.mjs";
+import { probePagesMd } from "./probes/pages-md.mjs";
 import {
   expandWorkspacePkgs,
   isNuxtPkg,
@@ -76,6 +77,7 @@ const result = {
   gsdDocs: null,
   productMd: null,
   gitignoreDocsAgents: null,
+  pagesMd: null, // PAGES.md 页面入口清单适用性（Agents.md 切片内建子产物，无 ready）
   devHub: null,
   lintInfra: null,
   pagesDeploy: null,
@@ -365,6 +367,11 @@ result.gitignoreDocsAgents = {
   docsIgnored: tryExec(`git check-ignore docs`, repoRoot) !== null,
   agentsSafe: tryExec(`git check-ignore docs/agents/domain.md`, repoRoot) === null,
 };
+
+// PAGES.md 页面入口清单适用性：Agents.md 切片的内建子产物，仅对有结构化
+// 入口可枚举的项目适用（前端页面族或 CLI 命令族），纯后端不适用。
+// 无 ready 字段——就绪收敛由 Agents.md 切片整体判定，--skip 三态机制不触及
+result.pagesMd = probePagesMd({ repoRoot, gsdDir });
 
 // Dev Hub 就绪信号。探测基准是 Nuxt 站点包：monorepo 下站点常是 playground/
 // demo 子包而非根（与 pagesDeploy 同一套站点定位函数）；Nuxt 模块包不算站点——

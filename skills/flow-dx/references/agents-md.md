@@ -1,6 +1,6 @@
 # Agents.md 切片执行手册
 
-由 SKILL.md Workflow 步骤 2 调起。环境盘点与范围确认已在 Workflow 中完成，本手册接收其决策输入，执行 `Agents.md` + `Claude.md`（互为 symlink）初始化与 AI 上下文基建（gsd-docs、产品上下文、Domain Docs 挂载、全库通读）。
+由 SKILL.md Workflow 步骤 2 调起。环境盘点与范围确认已在 Workflow 中完成，本手册接收其决策输入，执行 `Agents.md` + `Claude.md`（互为 symlink）初始化与 AI 上下文基建（gsd-docs、PAGES.md 页面入口清单、产品上下文、Domain Docs 挂载、全库通读）。
 
 纯文档编排，没有代码可 TDD，flow-dx **直接执行**，不委托 flow-dev。产物是项目基建文件，**全部进入 git**。
 
@@ -15,8 +15,9 @@
 * A：`<repo-root>/Agents.md`
 * C：`<repo-root>/Claude.md`
 * gsd-docs：`<repo-root>/.planning/codebase/*.md`
+* PAGES.md：`<repo-root>/.planning/codebase/PAGES.md`（盘点 `pagesMd.applicable=true` 时维护）
 * 产品上下文：`<repo-root>/PRODUCT.md`
-* 模板：技能目录 `templates/agents-md.template`
+* 模板：技能目录 `templates/agents-md.template`、`templates/pages-md.template`
 
 ## 执行步骤
 
@@ -41,7 +42,7 @@
    * mapper 完成后主代理后验检查（mapper 可能越界而不自知）：`git branch --show-current` 应仍为派发时分支、`git status --short` 不应出现 lockfile/workspace 清单类新文件。实测偏差的恢复路径：`git checkout <原分支> && git merge --ff-only <偏差分支>` 带回提交（偏差分支保留不删）；按仓库实际包管理器重装依赖恢复 node_modules 布局；顶层 symlink 计数为 0 后删 `node_modules/.pnpm` 孤儿存储
    * 指纹一致性：任何对 `.planning/codebase/*.md` 的手工修改（含主代理补漏）之后必须重算指纹写回 `meta.yaml.hash`，否则下次 flow-docs 误判文档过期
    * `gsd-sdk` 降级：本机 `gsd-sdk` 可能是 fnm wrapper（仅 `run`/`auto`/`init`，无 `query` 子命令）——workflow 里 `gsd-sdk query init.map-codebase` / `query agent-skills` 失败时手动填充 init context：`mapper_model` 省略（Agent 工具继承会话模型）、`date` 取当日、`AGENT_SKILLS_MAPPER` 尾部注入缺失不阻塞（mapper agent 自带模板），汇报中如实标注
-   * 等 mapper 完成用 task-notification 而非 `TaskOutput block=true` 轮询——后者超时回吐的是子代理 JSONL 转录的大段截断（4 个并行各吐一坨）；GSD workflow 自带的 commit 步骤按上方"禁止 git 提交"约束跳过，入库由本手册 Step 4 垂直切片统一收尾
+   * 等 mapper 完成用 task-notification 而非 `TaskOutput block=true` 轮询——后者超时回吐的是子代理 JSONL 转录的大段截断（4 个并行各吐一坨）；GSD workflow 自带的 commit 步骤按上方"禁止 git 提交"约束跳过，入库由本手册 Step 5 垂直切片统一收尾
    * 生成后密钥扫描（**rg 版，禁用 `-E`**——rg 原生支持正则，误用 `rg -E` 会报错退出触发 `||` 短路，打印假阴性）：
      ```
      rg -n '(sk-[a-zA-Z0-9]{20,}|sk_live_[a-zA-Z0-9]+|ghp_[a-zA-Z0-9]{36}|AKIA[A-Z0-9]{16}|xox[baprs]-[a-zA-Z0-9-]+|BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.)' .planning/codebase/
@@ -51,7 +52,18 @@
 3. **Domain Docs 挂载**：执行 `setup-matt-pocock-skills`，仅保留 `Domain Docs` 部分与文档；**无需 `Issue tracker`、`Triage Labels` 的描述及 `docs/agents/xxx` 文档**。正因不建 `docs/agents/domain.md`，其消费规则须**内联**进 A/C 的 `## Agent skills` 段——模板块里的 "See `docs/agents/domain.md`" 引用会成死链，禁止照抄
 4. **全库通读**：执行 `learn-codebase`。大库（数万行起）内联全读会淹没编排会话：按目录职责切 4-6 个分区并行派代理全读、摘要回流，主代理不重复读
 
-### 3. 挂载文档引用（按入库策略分支）
+### 3. PAGES.md 页面入口清单（按适用性执行）
+
+仅当盘点 `pagesMd.applicable` 为 true 时执行；为 false（纯后端项目，前端入口族与 CLI 命令族信号皆空）跳过——强行生成只会得到空表。PAGES.md 不进范围确认勾选集：它是本切片的内建子产物，适用即维护。
+
+- [ ] 落盘 `<repo-root>/.planning/codebase/PAGES.md`，骨架取 `templates/pages-md.template`（前端/CLI 双形态表头，按 `pagesMd.pkgs` 各包信号选用；两族都有则分节都写）
+- [ ] create（`pagesMd.exists=false`）：按 pkgs 信号静态提取——前端项目从路由配置（如 `src/router/**` 的 `path` × `meta.title`）或文件系统路由目录（`pages/`、`app/pages/` 等）枚举页面；CLI 项目从 `bin` 字段与命令目录（`commands/`、`src/commands/` 等）枚举子命令。提取口径与差异标注约定写进「数据来源」段，让阅读者能复核清单从哪来、何时过期
+- [ ] update（`pagesMd.exists=true`）：重新静态提取、以代码现状为准全文刷新，并更新 `<!-- refreshed: -->` 时间戳——它是下游判断清单新鲜度的唯一依据
+- [ ] 大项目（路由模块/命令数十个以上）派子代理提取回流，主代理不内联逐个读路由文件——与 learn-codebase 分区全读同理，防编排会话上下文淹没
+- [ ] 指纹约束：PAGES.md 落盘/刷新属于对 `.planning/codebase/*.md` 的修改，`.planning/meta.yaml` 存在时必须按 Step 2 gsd-docs 条目的指纹协议重算 `hash` 写回，否则下次 flow-docs 误判整族文档过期
+- [ ] 索引登记：PAGES.md 必须进挂载索引（Step 4 表格，模板尾 gsd-docs 片段已有对应表行）——漏登会在验证阶段被 `gsdDocs.unindexed` 漂移检测捕获
+
+### 4. 挂载文档引用（按入库策略分支）
 
 挂载目标由盘点 `gsdDocs.ignored` 决定——**不预设入库策略**，据实推断：
 
@@ -60,7 +72,7 @@
 - [ ] 用模板文件尾的可选表行片段补全表格，仅添加真实存在的文档行，禁止虚空引用
 - [ ] 索引完整性对账：以盘点 `gsdDocs.files` 为准，确保 `.planning/codebase/` 下**每个在盘文档**都有对应表行——`gsdDocs.unindexed` 非空即有文档在盘但未进索引（手工补登的文档易与索引脱节，如 TESTING.md/IDENTITY.md），逐行补登。已知文档的描述行优先复用模板文件尾片段；模板未收录的新文档按既有表格风格补一行，并把该文档回流进模板片段供后续项目复用
 
-### 4. 提交
+### 5. 提交
 
 - [ ] 提交落点：SKILL.md Workflow 步 0 已按 `git.owned` 归一化工作分支（他人项目即 `owned=false` 一律落 dev，本人项目落当前分支），本步骤直接提交到当前分支，勿再自行切分支；若单独调起本手册绕过了步 0，先按步 0 规则自行归一化再提交
 - [ ] 提交前 ignore 检查：若盘点 `gitignoreDocsAgents.agentsSafe` 为 false（已前置检出），需先为例外——把 `.gitignore` 中的 `docs/` 改写为 `docs/*` 并追加 `!docs/agents/`，确保 AI 基建文档入库而运行文档仍不入库；`.planning/` 同理需确认未被忽略（`git check-ignore` 验证）
@@ -74,6 +86,7 @@
 - Agents.md：`<repo-root>/Agents.md`；进 git：是
 - Claude.md：`<repo-root>/Claude.md`（symlink）；进 git：是
 - gsd-docs：`<repo-root>/.planning/codebase/*.md`；进 git：据 `gsdDocs.ignored`
+- PAGES.md：`<repo-root>/.planning/codebase/PAGES.md`（`pagesMd.applicable=true` 时维护）；进 git：据 `gsdDocs.ignored`
 - CLAUDE.local.md：`<repo-root>/CLAUDE.local.md`（`ignored=true` 时挂载）；进 git：否
 - 产品上下文：`<repo-root>/PRODUCT.md`；进 git：是
 - Domain Docs：`setup-matt-pocock-skills` 产出；进 git：是
