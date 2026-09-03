@@ -2,7 +2,6 @@
 name: flow-git
 description: 与 git 打交道的统一入口。默认分批提交（按修改意图把 diff 整理为垂直切片 commit），--rebase 把范围内零散 commit 按修改意图重组为逻辑提交（tree 不变），--retime 重写已提交记录的时间戳为 now，--push 推送前质量门禁（lint/format/test 自动修复后推送），--init 为项目安装 git hooks（commit 阶段：受保护分支禁止直提 + commitlint；push 阶段：pre-push 质量门禁 lint/test/typecheck）。当用户说「提交」「commit」「分批提交」「整理提交计划」「整理提交历史」「rebase」「合并散 commit」「历史太散」「重写 commit 时间」「提交时间挤在一起」「推送」「push」「安装 hooks」「git hooks」「init hooks」「pre-push」「质量门」「push 拦截」时触发
 argument-hint: <files...> [--rebase <base>] [--retime <base>] [--push] [--init [all|hooks|push]] [--dry-run]
-disable-model-invocation: true
 metadata:
   version: 0.1.0-alpha.0
 ---
