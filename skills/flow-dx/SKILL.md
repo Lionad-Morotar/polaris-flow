@@ -124,7 +124,7 @@ skill 目录 `templates/` 下提供以下参考模板：dev 模板供 `flow-dev`
      * Q1（multiSelect）：本次补齐的切片，仅列有缺口的（Agents.md 初始化 / Dev Hub 建设 / Lint 基建迁移 / Pages 部署）
      * Q2（multiSelect，Q1 含 Agents.md 切片时生效，否则忽略答案）：增强步骤，仅列 `skills.<name>.available` 为 true 且未就绪的项（gsd-docs 生成或更新 / 产品上下文 / Domain Docs / 全库通读）
      * Q3（单选，A 或 C 已存在且骨架需要改动时生效）：确认覆盖重写
-     * Q4（单选）：完成后自动垂直切片提交，还是只输出提交计划
+     * Q4（单选）：完成后自动垂直切片提交（message 遵循 `~/GL/flow-skills/skills/flow-git/references/commit-message.md`），还是只输出提交计划
    - [ ] 若 Ask 未被回应：按"文档高标准质量决定"——切片与增强全选、确认重写、自动提交
 
 2. Agents.md 基建（flow-dx 直接执行）

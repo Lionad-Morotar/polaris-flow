@@ -82,6 +82,7 @@ module.exports = {
         'test', // adding missing tests or correcting existing tests
         'wip', // work in progress
         'release', // release commit
+        'merge', // 叙事层 merge 摘要提交（见 commit-message.md）；git 默认 Merge 消息走 ignores 豁免
         'cosm', // changes related to cosmetic updates
         'stash' // commit a feat not ready to be tested or reviewed
       ]
@@ -90,7 +91,7 @@ module.exports = {
 }
 ```
 
-要点：基于 `@commitlint/config-conventional`，type 白名单在常规十项外扩展 `wip`、`release`、`cosm`、`stash`；`Merge ` 开头的消息豁免（merge commit 默认消息不合 conventional 格式）。
+要点：基于 `@commitlint/config-conventional`，type 白名单在常规十项外扩展 `wip`、`release`、`merge`、`cosm`、`stash`（`merge` 是叙事层摘要提交的合法 type）；`Merge ` 开头的消息豁免（merge commit 默认消息不合 conventional 格式）。
 
 ### 4. `package.json` 片段
 

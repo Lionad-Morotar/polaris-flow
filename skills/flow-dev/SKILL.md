@@ -297,7 +297,7 @@ node -e "console.log(new Date().toLocaleString('sv-SE'))"
    - [ ] **提交收口**（Bugs 全部关闭后执行；Slice `done` 的前置条件；worktree 模式下在 `<working-dir>` 中提交；`--delegate` 时提交已由修复子代理按分派纪律完成，本项退化为验收清单的提交核对与工作区校验，并把 `commits[]` 回填 `state.json`）：
      - [ ] 提交边界：仅 `git add` 归属当前 Slice 的文件清单，禁止 `git add -A` / `git add .`（避免卷入非本 Slice 改动或来源不明的残留）；`docs/*` 产物与 `<run-dir>` 已被忽略、不进提交。多会话并行同仓时 add 与 commit 之间仍存在竞态窗口（他人暂存会被裹挟）：提交后立即 `git show HEAD --stat` 核对文件清单仅含本 Slice 文件；发现裹挟且分叉点上无他人新提交时 `git reset --mixed HEAD~1` 卸出全部（工作区零丢失）再原子化 add+commit，他人已叠交时按 flow-mem `git/commit-index-scope.md` 的 reflog 流程重建归属
      - [ ] **若 `--stage`**：不执行提交，把本 Slice 提交计划（建议 message + 文件清单；Slice 内多 commit 时逐条列出）记入 `state.json` 该 Slice 的 `commit_plan[]`，跳过本项其余子项
-     - [ ] 执行提交：message 遵循项目 `git log` 既有风格（`feat:`/`fix:` 等前缀与项目一致、垂直切片语义），不夹带流程编号（Slice 序号、Step、审查轮次等）；Slice 内多个内聚子任务可分多个 commit；每个 commit 成功后把 `{ hash, message }` 记入 `state.json` 该 Slice 的 `commits[]`
+     - [ ] 执行提交：message 遵循 `~/GL/flow-skills/skills/flow-git/references/commit-message.md` 切片层规范（type/scope 前缀与项目 `git log` 既有风格一致、垂直切片语义），不夹带流程编号（Slice 序号、Step、审查轮次等）；Slice 内多个内聚子任务可分多个 commit；每个 commit 成功后把 `{ hash, message }` 记入 `state.json` 该 Slice 的 `commits[]`
      - [ ] **提交失败回炉**（不记 blocker、不停止）：失败输出（pre-commit hook 拦截、lint 报错等）视为新 Bug 输入，回到本步骤开头继续下一轮（`fix_round` 自增），直至提交成功；未提交干净不得离开本 Slice
    - [ ] 若仍有未关闭 P0/P1（含提交收口未成功）且未达 `--depth` 对应上限（见 `references/quality-gates.md`），回到本步骤开头继续下一轮
    - [ ] 若达到上限仍有未关闭 P0/P1（含提交收口未成功）：

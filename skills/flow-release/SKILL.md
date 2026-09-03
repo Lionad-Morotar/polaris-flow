@@ -239,9 +239,12 @@ npx standard-version --release-as [patch|minor|major]
 标准发布提交：
 
 ```bash
-# 提交所有变更
+# 提交所有变更（message body 附本版批次清单——直接摘录第 3 步已定稿的 Changelog 版本段条目，一行一条；
+# 裸 "release: vX.Y.Z" 是空白章节页：历史读者以 release commit 切窗口，清单是它的唯一叙事载体）
 git add .
-git commit -m "release: v<版本号>"
+git commit -m "release: v<版本号>" -m "- <批次条目1>
+- <批次条目2>
+- <批次条目3>"
 
 # 创建标签
 git tag -a "v<版本号>" -m "Release v<版本号>"
@@ -252,7 +255,7 @@ git push origin main --tags
 git push origin <当前分支> --tags
 ```
 
-skill monorepo 形态例外：提交与 tag 由 bump 脚本完成，形态为 `chore(<skill>): v<版本号>` 提交 + `<skill>@<版本号>` annotated tag（逐技能各成一对，禁止合并为一个仓级提交）；推送命令相同。
+提交信息规范遵循 `flow-git/references/commit-message.md`（叙事层：release 批次清单）。skill monorepo 形态例外：提交与 tag 由 bump 脚本完成，形态为 `chore(<skill>): v<版本号>` 提交 + `<skill>@<版本号>` annotated tag（逐技能各成一对，禁止合并为一个仓级提交；单技能变更面小，不附批次清单）；推送命令相同。
 
 changesets 项目例外：`<pkg>@<version>` 包作用域 tag 由 `changeset publish` 在**发布成功后**自动创建，第 5 步无需手工建 tag——tag 语义即「该版本已发布」的原子标记，publish 失败不会留下指向未发布版本的 tag。若已手工创建同名 tag，publish 幂等跳过不报错（日志仍打印 "New tag" 措辞，无害）。
 
@@ -405,7 +408,7 @@ Why 不能指望"全局 registry 正好是官方源"：开发者常把全局 reg
 - [ ] 版本类型已确定（patch/minor/major）
 - [ ] **用户已确认 Changelog 内容**
 - [ ] prerelease 分支策略已遵守（1.4）：alpha 在当前分支发版，stable 才合并发版分支后打 tag
-- [ ] Git commit / tag 信息符合约定（`release: v<版本号>`；skill monorepo 为 `chore(<skill>): v<版本号>` + `<skill>@<版本号>`）
+- [ ] Git commit / tag 信息符合约定（`release: v<版本号>` + body 批次清单，见 `flow-git/references/commit-message.md`；skill monorepo 为 `chore(<skill>): v<版本号>` + `<skill>@<版本号>`）
 - [ ] 发布通道分流已执行（第 7 步）：prerelease 由代理直接 `pnpm release` 直发；stable 止于 commit + tag，交还用户 `! pnpm release` 交互输 OTP
 
 ### 发布后人工判读（基于 `preflight.mjs --post` 输出）

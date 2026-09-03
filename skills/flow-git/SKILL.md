@@ -11,7 +11,7 @@ metadata:
 ## 要求
 
 * 由主代理直接执行，不委托 subagent。git 操作需要交互确认且流程短，主代理直接操作更可控。
-* commit message 格式遵循 CLAUDE.md：`<type>: <高度凝练的 spec>`，垂直切片（每个 commit 可独立运行、可独立测试），无需描述测试状态。
+* commit message 规范遵循 `references/commit-message.md`（切片层 + 叙事层），该文件是单一事实源，其他 flow 技能写 commit message 时也引用它。
 * 严格按模式分派执行对应 references——**进入该模式时才读取对应 references**（渐进披露，避免一次性加载全部细节）。
 * 永不在默认分支（main/master）直接提交改动——遵循 CLAUDE.md「只在任务收尾时提交」。
 
@@ -34,6 +34,10 @@ metadata:
 - `<current-branch>`：当前分支；`git branch --show-current`
 - `<target-submodule>`：待提交文件所在子模块（若有）；文件路径解析；非 submodule 时为空
 - `$original_staged_files`：commit 模式开始前已 staged 的文件；`git diff --name-only --cached`（commit 模式记录，收尾恢复）
+
+## 叙事层约定（章节索引）
+
+commit message 分切片层与叙事层（merge/release 章节索引）——单点修改直提，同主题簇（≥5 切片）与批量同质提交走分支 + merge 摘要，release commit 带本版批次清单。完整规范见 `references/commit-message.md`（其他技能写 commit message 时引用该文件）。
 
 ## Workflow
 

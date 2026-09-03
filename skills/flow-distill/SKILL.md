@@ -70,6 +70,7 @@ metadata:
 5. 自动确认归档计划并执行写入与提交
   - [ ] 已完整展示归档计划
   - [ ] 已模拟“用户确认”并继续执行
+  - [ ] commit message 遵循 `~/GL/flow-skills/skills/flow-git/references/commit-message.md` 切片层规范
   - [ ] 已按归档计划写入文件
   - [ ] 已更新子领域索引文件（若新建 Topic 文件，如 `content/6.maps/_ai/ai.md`）
   - [ ] 已执行语法检查（重点校验引号方向与配对：中文左双引号 `“` / 右双引号 `”`、英文引号、ASCII 直双引号混用等）

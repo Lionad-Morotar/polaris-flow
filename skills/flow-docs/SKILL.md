@@ -118,7 +118,7 @@ GSD 变量：`$doc_hash`（`.planning/codebase/*.md` 内容指纹）、`$isOld`�
 
 ## 安全红线
 
-- 不执行 `git commit`（GSD 文档入库由 flow-git 收尾）；mapper 子代理严禁自行 commit。例外：翻译分支（D）收尾的 commit/tag 是翻译进度状态机的内在步骤——tag 记录翻译对应的上游基点，T-2 依赖它计算差异——仅限 `translation/cn` 分支且必须经用户明确确认。
+- 不执行 `git commit`（GSD 文档入库由 flow-git 收尾）；mapper 子代理严禁自行 commit。例外：翻译分支（D）收尾的 commit/tag 是翻译进度状态机的内在步骤——tag 记录翻译对应的上游基点，T-2 依赖它计算差异——仅限 `translation/cn` 分支且必须经用户明确确认；此例外的 commit message 同样遵循 `~/GL/flow-skills/skills/flow-git/references/commit-message.md`。
 - GSD：不首次生成；mapper 不得重写未受代码变更影响的文档段落。`.planning/codebase/` 更新后必须过 `verify-docs-index.mjs`——docs 孤儿文档（未被 `.planning/codebase/` 或 CLAUDE.md 引用）与 gitignore 目标引用零容忍。
 - 核查：REFUTED 必须 quote 实际反证；不得凭先验知识编造证据；搜索工具链全线不可用 → 停止并报告，不硬凑。
 - 核查伦理：区分事实修正与观点压制——L2/L3 层呈现多元框架，不判「错误」。
