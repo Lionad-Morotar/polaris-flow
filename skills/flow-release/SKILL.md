@@ -3,7 +3,7 @@ name: flow-release
 description: 项目版本发布流程指导，帮助用户完成版本规划、monorepo 发版变更矩阵（距上次发布哪些包有变化、依赖关系、逐包 bump 建议）、Changelog 管理、版本号升级、Git 标签创建和首次发布准备（支持 npm 包、VSCode 扩展/vsce、Claude Code skill 包 / skill monorepo（多技能共仓独立版本）、Claude Code 插件等多发布目标）。Use when: (1) 用户需要发布新版本 (2) 需要创建版本发布流程 (3) 需要管理版本号和 Changelog (4) 需要自动化版本发布 (5) 需要识别分支模型并确保发版分支同步 (6) 首次发布准备（npm / VSCode 扩展 / Claude skill / CC 插件）
 argument-hint: "[--changelog-only] [--sync-to <target-branch>]"
 metadata:
-  version: 0.1.0-alpha.0
+  version: 0.1.0-alpha.1
 ---
 
 # flow-release：项目版本发布流程
@@ -68,6 +68,8 @@ node scripts/preflight.mjs --json     # JSON 输出，供自动化流程消费
 1. 是否存在长期 `release`/`develop` 分支
 2. 最近 tag 落在哪个分支（tag 位置优先于分支名——tag 反映真实发版行为，分支名可能误导）
 3. tag 应位于长期分支，而不是 feat/hotfix 等短期分支
+4. tag 落在 release 分支且存在长期 dev → **gitlab flow release branch 形态**（1.3 默认形态，用户既定偏好）；tag 落在 main 且有 develop → gitflow；tag 落在 main 且无长期分支 → trunk-based
+5. 无既有行为可判时，按用户默认倾向建议 gitlab flow release branch 形态，用 Ask 确认
 
 探测有定论则自动选路径；探测仍无定论才用 Ask 询问用户（"检测到分支模型为 X，应走 [Trunk-based/Release-branch] 路径，是否正确？"）。
 
@@ -79,15 +81,46 @@ node scripts/preflight.mjs --json     # JSON 输出，供自动化流程消费
 2. **拉取最新（仅快进）**：`git pull --ff-only origin main`
 3. **验证工作区干净**：`git status`，确保无未提交变更
 
-### 1.3 Release-branch 路径（gitflow 等）
+### 1.3 Release-branch 路径
 
-有长期 release 分支用于发版准备：
+Release-branch 有两种形态，以 **tag 打在哪** 区分（tag 反映真实发版行为，分支名可能误导）：
+
+- **gitflow**：release 只是发版准备区，最终 merge 回 main，tag 打在 main
+- **gitlab flow release branch（用户默认倾向）**：release 分支本身就是发版分支，tag 直接打在 release 分支上，main 不参与——集成在 dev，发版时 fork release，修 bug 用 cherry-pick/merge 从 release 带回 dev
+
+#### gitlab flow release branch 形态（默认）操作步骤
+
+1. **删除旧 release 分支**（如存在，本地与远程都删）：
+
+   ```bash
+   git branch -D release 2>/dev/null; git push origin --delete release 2>/dev/null
+   ```
+
+2. **从集成分支（dev）fork 新 release 并推送**：
+
+   ```bash
+   git checkout -b release dev && git push -u origin release
+   ```
+
+3. **全部发版动作在 release 分支上完成**：版本 bump、Changelog、commit、tag、publish、prerelease 推送（`git push origin release --tags`）
+4. **发版完成后切回 dev 同步版本状态**（Postflight 通过后执行）：
+
+   ```bash
+   git checkout dev && git merge --ff-only release
+   ```
+
+   Why 必须同步：版本状态载体（package.json、CHANGELOG、changesets pre.json）只落在了 release 分支，dev 不吸收 release commit 的话，下次从 dev fork release 时版本号与 changelog 会整体回退，changesets pre 模式记账也会错乱。dev 的新提交在此之后的，`--ff-only` 失败时改用 `git merge release --no-ff` 并解决冲突。
+
+5. dev 的推送遵循仓库自身惯例（如「任务途中仅 commit 不 push」），release 分支与 tag 随发版推送
+
+#### gitflow 形态操作步骤
 
 1. **检查当前分支**：`git branch --show-current`，不在 release 则 `git checkout release`
 2. **确保 release 分支最新**：
    - 开发在 develop/feature 分支：`git fetch origin && git merge origin/develop --no-ff -m "chore: merge develop into release"`
    - 已在 release 分支开发：`git pull origin release`
 3. **验证工作区干净**：`git status`，确保无未提交变更
+4. stable 发版时 merge 回 main 打 tag；prerelease 见 1.4
 
 ### 1.4 Alpha / Prerelease 分支策略
 
@@ -97,7 +130,7 @@ node scripts/preflight.mjs --json     # JSON 输出，供自动化流程消费
 - 版本号升级、Changelog、Git 提交与标签都在当前分支完成。
 - 推送时使用当前分支：`git push origin <当前分支> --tags`。
 
-只有在发 **stable** 版本时，才需要把变更合并到 `main`（trunk-based）或 `release`（gitflow）后再打 tag。
+只有在发 **stable** 版本时，才需要把变更合并到 `main`（trunk-based）或 `release`（gitflow）后再打 tag；gitlab flow release branch 形态（1.3 默认）stable 同样直接打在 release 分支上，无需合并。
 
 ### 1.5 test 分支合并（flow-polaris 产物）
 
@@ -186,7 +219,7 @@ npx standard-version --release-as [patch|minor|major]
 **Monorepo 项目（发布目标 = monorepo）**：顺项目既有工具分流（preflight 识别 release 脚本形态），**不主动为无版本工具的项目引入新工具**——
 
 - **原生路径（默认）**：按发版变更矩阵的用户确认结果，逐包 `npm version <级别|x.y.z> --no-git-tag-version` bump（提交与 tag 统一在第 5 步，避免 npm version 自动产生孤点 commit）；发布由 release.mjs 依赖序 + 幂等跳过承接——只有变更包被 bump，未变更包跳过
-- **项目已用 changesets**（release 脚本含 `changeset version`/`changeset publish`）：从其约定，`npx changeset version`。changesets 的核心循环是 PR-based（changeset 声明 + Version Packages PR），trunk-based 无 PR 流程引入无收益，适用场景与判定见 [monorepo-versioning](./references/monorepo-versioning.md)
+- **项目已用 changesets**（release 脚本含 `changeset version`/`changeset publish`）：从其约定，`npx changeset version`。发 prerelease 走正统 `pre` 模式（`changeset pre enter alpha` → 写 changeset 文件 → `changeset version` 自动生成并递增 `x.y.z-alpha.N`），显式版本号经 changeset 文件的 bump 级别 + pre 模式映射达成，不手工改 package.json；独立模式（非 fixed）配套配置与流程细节见 [monorepo-versioning](./references/monorepo-versioning.md)
 - **项目已用 lerna**：`npx lerna version [patch|minor|major]`
 
 **skill monorepo（发布目标 = skill-monorepo）**：
@@ -220,6 +253,8 @@ git push origin <当前分支> --tags
 ```
 
 skill monorepo 形态例外：提交与 tag 由 bump 脚本完成，形态为 `chore(<skill>): v<版本号>` 提交 + `<skill>@<版本号>` annotated tag（逐技能各成一对，禁止合并为一个仓级提交）；推送命令相同。
+
+changesets 项目例外：`<pkg>@<version>` 包作用域 tag 由 `changeset publish` 在**发布成功后**自动创建，第 5 步无需手工建 tag——tag 语义即「该版本已发布」的原子标记，publish 失败不会留下指向未发布版本的 tag。若已手工创建同名 tag，publish 幂等跳过不报错（日志仍打印 "New tag" 措辞，无害）。
 
 ## 6. 首次发布检测 & 发布准备
 
@@ -288,6 +323,8 @@ npm registry 检查与 publishConfig 要求均不适用（npm 上存在同名无
 - **stable（latest）**：npm 账号开启 auth-and-writes 2FA 时，非交互 publish 报 `ERR_PNPM_OTP_NON_INTERACTIVE`——OTP 只能用户现场输入，代理无法代办；且 latest 指针移动即影响全量用户。流程止于 commit + tag，提示用户交互执行 `! pnpm release`（dry-run 不受影响，代理可照常跑完验证）。多包逐包 OTP 与 token 绕行方案见 [release-script](./references/release-script.md)。
 
 非 npm 发布目标：skill 包 / skill monorepo / CC 插件「推送即发布」（第 5 步的 `git push --tags` 即完成分发），本步无额外动作；VSCode 扩展把 `pnpm release` 换成 vsce 路径，通道分流原则相同。
+
+**发版后分支同步**：Postflight 通过后执行。gitlab flow release branch 形态（1.3 默认）切回 dev 并 `git merge --ff-only release` 把版本状态带回集成主干；trunk-based / gitflow 无此步（发版本就发生在主干 / main 上）。
 
 ## 发布脚本约定（pnpm release，必备）
 

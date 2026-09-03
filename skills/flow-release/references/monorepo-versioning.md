@@ -38,10 +38,12 @@ changesets 官方语义：fixed 组任一成员 bump 时**所有成员同时 bum
 
 ### 策略选择参考
 
-- 用户更关心「套件整体版本」而非「哪个包变了」→ fixed
+- **用户既定默认倾向：independent**——包变更节奏差异大的仓库（主力迭代包 + 稳定包并存）fixed/linked 只会制造空版本与发版噪音
+- 用户更关心「套件整体版本」而非「哪个包变了」→ fixed（须用户明示才选）
 - 核心包族变更时须互配、但迭代节奏不一 → 核心族 linked，外围适配器 independent
 - 各包有自己的消费方与迭代节奏 → independent（本技能默认形态：发布脚本幂等跳过已发版本，天然支持「只发有变化的包」）
 - 从 independent 切 fixed/linked 前想清楚：历史版本号不同的包进组瞬间会被拉到组内最高版本，这是一次性的版本号跳变
+- **fixed 名存实亡的识别信号**：组内版本号已分叉（如 `0.3.16` vs `0.3.12` 并存）说明 fixed 语义实际未被维护，应移除 `fixed` 组改 independent，而不是"拉齐一次"继续假装同步
 
 ## 是否引入版本工具（changesets / lerna）
 
@@ -58,7 +60,7 @@ changesets 才是对的选择的场景（项目已用则沿用；未用但命中
 - 需要 `fixed` / `linked` 版本组语义（changesets 独家干净提供）
 - 要 GitHub Actions 全自动版本 PR 与发布
 
-trunk-based、无 PR、代理驱动的发版流程中，changesets 的自动化循环不可用，只剩手写 changeset 文件的仪式，引入无收益；lerna 同理。
+trunk-based、无 PR、代理驱动的发版流程中，changesets 的 PR 自动化循环不可用，此时不为未用项目引入（原生路径已覆盖）；但项目已用 changesets 时，pre 模式版本递增、包级 changelog 生成与 publish 幂等在代理直发下依然有效，按下方「changesets 独立模式的代理直发配置」发挥全部价值。lerna 同理。
 
 ## 策略识别（探测项目既有策略）
 
@@ -128,6 +130,41 @@ definition ← stream ← vue ← comps ← comps-{element-plus,naive-ui,nuxt-ui
 
 矩阵目前由代理按上述命令现算（git log + package.json 解析均为机械操作）；preflight.mjs 已覆盖逐包版本一致性与 tag 占用检查，「变更检测 + 依赖图」并入 preflight 是可选的后续增强。
 
+## changesets 独立（independent）模式的代理直发配置
+
+项目已用 changesets 时的标配形态（用户既定偏好：非 fixed），四个配置/流程要点：
+
+### 1. `bumpVersionsWithWorkspaceProtocolOnly: true`（防依赖方空 bump）
+
+`updateInternalDependencies: "patch"` 的默认行为：被依赖包发新版时，依赖方即使零变更也被 patch bump，包级 CHANGELOG 生成 `Updated dependencies []` 空条目——independent 语义下这是噪音版本。`workspace:*` 通配一切版本，联动 bump 纯属多余。配置后 workspace 协议依赖只更新范围字符串、依赖方版本纹丝不动：
+
+```json
+{
+  "updateInternalDependencies": "patch",
+  "bumpVersionsWithWorkspaceProtocolOnly": true
+}
+```
+
+### 2. prerelease 走正统 `pre` 模式
+
+```bash
+npx changeset pre enter alpha   # 首次进 alpha 系列；写 .changeset/pre.json 记账 initialVersions
+# ... 写 changeset 文件（bump 级别 + 面向价值的条目内容）...
+npx changeset version           # 生成 x.y.z-alpha.0（stable 版本 + patch/minor bump + pre 标签）；后续自动递增 alpha.N
+npx changeset publish           # 发布版本号不在 registry 的包；prerelease 自动打 alpha dist-tag；成功后自动建 <pkg>@<version> tag
+# 出 stable 时：npx changeset pre exit，再走普通 changeset version
+```
+
+Why 走 pre 模式而不是手工改 package.json：`pre.json` 记账让后续 `changeset version` 知道在 prerelease 系列内递增（`alpha.0 → alpha.1`）而非跨出系列直奔 stable；手工 bump 每次都要人肉推算版本号。已消费的 changeset 文件记录在 `pre.json` 的 `changesets` 数组，不会重放。
+
+### 3. 显式版本号与 changesets 的映射
+
+用户指定目标版本 `x.(y+1).0-alpha.0` → 写 minor changeset；`x.y.(z+1)-alpha.0` → 写 patch changeset，pre 模式自动落在目标号上。仅当目标与「当前版本 + 任一 bump 级别」都对不上时（如跨版本追平、整组重置）才手工改 package.json。
+
+### 4. 双轨 CHANGELOG 的素材同源
+
+包级 `packages/*/CHANGELOG.md` 由 `changeset version` 自动生成（条目 = changeset 文件内容，按 Minor/Patch Changes 分组）；根 `CHANGELOG.md`（Keep a Changelog）手工维护版本段。两处的条目素材同源——都从变更矩阵确认后的变更摘要提炼，一次提炼两处落盘。
+
 ## 实证案例（已脱敏）
 
 ### 案例 A：某组件库 monorepo（independent，分叉演化）
@@ -143,6 +180,14 @@ definition ← stream ← vue ← comps ← comps-{element-plus,naive-ui,nuxt-ui
 - 实际链路：手工逐包 bump → 自研构建 CLI 的 release 子命令（npm 模式）逐包发布——源码内 `skipVersion = isReleaseNPM`，npm 模式完全不 bump，跳过 git/build 检查，只发当前版本
 - 根 `release` 脚本只发两个核心包，其余公开包不进发布流程
 - 版本早已不统一：包全是 `0.0.1`，根 package.json 却是 `1.0.0-alpha.3`
+
+### 案例 C：某工具 UI 组件库（fixed 名存实亡 → independent 改造实战）
+
+- 起点：changesets `fixed` 组三包（components/renderer/server），实际版本分叉 `0.3.16` vs `0.3.12` vs `0.3.12`，fixed 语义久未维护
+- 改造：`fixed: []` + `bumpVersionsWithWorkspaceProtocolOnly: true`，进 `pre` 模式（initialVersions 记住三个包的原版本）
+- 首轮 version 即暴露默认配置缺陷：`updateInternalDependencies: patch` 把零变更的 renderer/server 空 bump 到 `0.3.13-alpha.0`（含 `Updated dependencies` 空条目），还原后补配置重跑，联动消失
+- 发版：仅变更包 components 发 `0.3.17-alpha.0`（patch changeset + pre alpha 从 0.3.16 映射），renderer/server/theme 由 publish 幂等跳过；手工预建的 `<pkg>@<version>` tag 未被 publish 覆盖（同名幂等），tag 与 alpha dist-tag 就位、latest 不动
+- 门禁链（prerelease→build→prebuild→test）首轮即拦截一个 story 缺树分组的真实缺陷
 
 [^changesets-fixed]: [changesets fixed-packages](https://github.com/changesets/changesets/blob/main/docs/fixed-packages.md): fixed 组全员同步 bump 并发布，即使无变更
 [^changesets-linked]: [changesets linked-packages](https://github.com/changesets/changesets/blob/main/docs/linked-packages.md): 成员对齐组内最高版本与最高 bump 级别，无 changeset 的成员不 bump 不发布
