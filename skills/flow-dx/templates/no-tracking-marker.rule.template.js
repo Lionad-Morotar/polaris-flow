@@ -2,7 +2,7 @@
  * ESLint 规则：禁止注释夹带开发追踪标记与外部编号引用（模板）
  *
  * 项目化调整点（复制到 <repo-root>/eslint-plugin-<org>/rules/no-tracking-marker.js 后评估）：
- * ① PATTERNS 形态集与 kind 文案按项目任务系统的编号惯例裁剪（默认覆盖 Phase/任务 ID/切片 ID 等 11 类）
+ * ① PATTERNS 形态集与 kind 文案按项目任务系统的编号惯例裁剪（默认覆盖 Phase/任务 ID/切片 ID/规格章节引用等 15 类）
  * ② 豁免与追加形态经 flat config options 注入（allow / additionalPatterns），不改规则本体
  * ③ 排除边界（eslint/@ts- 指令注释）为通用设计，一般无需调整
  *
@@ -12,7 +12,8 @@
  * 任务系统废弃或规划文档删除后，编号成为死引用，读者既不知道它指什么，也无法验证是否仍然成立。
  * 注释应只解释 why（隐含假设、折衷、不稳健之处），需要溯源时用自己的话重述背景。
  *
- * 实现策略：逐注释扫描（getAllComments + .vue 模板 HTMLComment），report 定位到注释节点。
+ * 实现策略：逐注释扫描（getAllComments + .vue 模板 HTMLComment + .vue <style> 块 CSS 注释
+ * ——style 非 JS 代码不进 parser AST，只能对源文本切区间提取），report 定位到注释节点。
  * 只扫注释不扫字符串与代码——日期、版本号、文案里的数字形态天然免疫。
  *
  * 检测形态与排除边界：
@@ -22,7 +23,8 @@
  *   中文阶段编号（"阶段 1 — 认证"/"知识库阶段 8"）、
  *   英文步骤/分段标签（"Step 1:"/"Stage 2"/"Part A:"/"Part B2:"）——中英文阶段语义同族：编号是规划文档在函数内的
  *   残留，脱离文档即死引用，函数内代码重排后编号语义随之漂移，一律禁止；
- *   CR#/ADR 外部编号、审查溯源措辞（正交审查/审查发现）、flow/teammate 上下文编号、DEFAULT- 前缀、
+ *   CR#/ADR 外部编号、spec/§ 规格章节引用（"spec §4.4"/"spec(§4.4)"/"spec 4.4"/裸 "§2.3"——
+ *   设计稿/规格文档章节号在注释里无法溯源）、审查溯源措辞（正交审查/审查发现）、flow/teammate 上下文编号、DEFAULT- 前缀、
  *   内部系统路由代号（Route Z——线上系统的内部路由编号，仓库内无任何对应物可溯源）
  * - 排除：eslint/@ts- 指令注释——否则 disable 本规则的注释会自我举报，永远无法抑制
  *
@@ -34,6 +36,8 @@
  * - 阶段语义族大小写不敏感，普通英文表述（"part a of ..."/"plan 9"/"step 2 再试"）与
  *   "Part B2" 类部件号引用同属检出范围，唯一豁免通道是 allow；
  *   "Part B2X" 数字后跟字母时 \b 无法落在词内，仍免疫
+ * - spec 族不要求 § 符号（"spec 4.4" 命中），协议版本表述（"OpenAPI spec 3.0"）会被误伤，
+ *   经 allow 豁免；无编号的 spec 一词不命中
  *
  * 使用注意：
  * - allow 为部分匹配（RegExp.test），精确豁免单个 marker 请写锚定形式，如 '^S3$'
@@ -61,6 +65,11 @@ const PATTERNS = [
   { kind: '步骤编号', re: /\b(?:Step|Stage)\s+\d+\b/i },
   { kind: '分段编号', re: /\bPart\s+[A-Z]\d*\b/i },
   { kind: '外部编号', re: /CR#\d+\b|\bADR-?\d+\b/ },
+  // spec/§ 规格章节引用："spec §4.4"/"spec(§4.4)"/"spec 4.4"/裸 "§2.3"——设计稿/规格文档的
+  // 章节号在注释里无法溯源；§ 符号本身即章节引用信号，有无 spec 前缀均命中（两条模式长短互补，
+  // 含 spec 的命中更长，去重逻辑保留长者）
+  { kind: '规格引用', re: /\bspecs?\b\s*[(：:]?\s*(?:§\s*)?\d+(?:\.\d+)*/i },
+  { kind: '章节引用', re: /§\s*\d+(?:\.\d+)*/ },
   { kind: '审查溯源', re: /正交审查|审查发现/ },
   { kind: '协作编号', re: /(?:flow|teammate\s+review)\s+[A-Z]\d+\b/i },
   // 大写敏感与 Phase 同理：小写 route 是 HTTP 路由的普通技术词，大写单字母形态才指向内部系统代号
@@ -169,6 +178,27 @@ export default {
         // .vue 模板的 HTML 注释不在 getAllComments 中，挂在 templateBody.comments
         for (const comment of ast.templateBody?.comments ?? []) {
           scanComment(comment)
+        }
+        // <style> 块的 CSS 注释同样不进 parser AST（style 非 JS 代码），只能对源文本
+        // 按 <style> 区间切出 /* */ 注释再扫；伪节点自带 range/loc 供 report 定位
+        if (context.filename.endsWith('.vue')) {
+          const text = context.sourceCode.getText()
+          for (const block of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) {
+            const base = block.index + block[0].indexOf(block[1])
+            for (const m of block[1].matchAll(/\/\*[\s\S]*?\*\//g)) {
+              const start = base + m.index
+              const end = start + m[0].length
+              scanComment({
+                type: 'Block',
+                value: m[0].slice(2, -2),
+                range: [start, end],
+                loc: {
+                  start: context.sourceCode.getLocFromIndex(start),
+                  end: context.sourceCode.getLocFromIndex(end),
+                },
+              })
+            }
+          }
         }
       },
     }

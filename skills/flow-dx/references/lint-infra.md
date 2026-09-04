@@ -167,6 +167,7 @@
 - 同一元素报两个 `hover:bg-*` 冲突：条件分支类与 base 预设双写（如 danger 分支 `hover:bg-accent-red/10` + base `hover:bg-surface-card`）——base 移除预设，改为各分支互斥书写；步骤 5
 - 自研 Vue 规则的 template 校验不触发：新版 vue-eslint-parser 的 parserServices 不再暴露 `templateBody` 属性（仅剩 `defineTemplateBodyVisitor`/`getDocumentFragment`）——经 `getDocumentFragment()` 取 `<template>` VElement 的 children 即页面根节点；组件命名规则
 - 自研规则扫不到 .vue 模板的 HTML 注释：`getAllComments()` 与 fragment children 均不含 HTML 注释——它们挂在 `sourceCode.ast.templateBody.comments`；注释追踪标记规则
+- 自研规则扫不到 .vue `<style>` 块的 CSS 注释：style 非 JS 代码，parser AST 的 comments 只收 script/template 部分——对源文本按 `<style...>...</style>` 区间正则切出 `/* */`，以伪节点（type/value/range/loc，loc 经 `sourceCode.getLocFromIndex` 两端定位）走同一扫描；注意以 `filename.endsWith('.vue')` 门槛，防 .ts 内字符串误入；注释追踪标记规则
 - 规则测试里 disable 指令不生效：RuleTester 中被测规则以 `rule-to-test/<name>` 别名注册，真实插件 ID 的 eslint-disable 指令无法命中（还会报 rule not found）——抑制语义须用 Linter API 注册真实插件 ID 直测；注释追踪标记规则
 - 规则文件被自身规则全量报错（自举）：规则头注释含违规形态示例，而项目 lint 范围扩到了插件所在扩展名——样例写进字符串 fixture 或注明 lint 范围边界；注释追踪标记规则
 - fixable error 永远修不完，`--fix` 多轮后原样残留：两条规则的 fixer 互相改写同一文本（Circular fixes）——典型对：本规则改 name 为 kebab，`vue/component-definition-name-casing` 改回 PascalCase。`--fix-dry-run` 看 output 不变 + `ESLintCircularFixesWarning` 即可确诊，解法是关掉对立规则而非修 fixer；组件命名规则
