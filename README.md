@@ -34,7 +34,7 @@ npx skills ls
 
 ## 快速上手
 
-装完后先尝试浅浅尝试一下技能触发：
+装完后先浅浅尝试一下技能触发：
 
 ```plaintext
 /flow-dev 在 /tmp/firewood 给 https://github.com/shapiro500/screentoys/blob/main/firewood/index.html 制作 flow-tour
