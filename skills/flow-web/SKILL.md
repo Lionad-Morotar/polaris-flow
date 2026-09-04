@@ -141,7 +141,9 @@ open-tab.sh --url <url> --session <name> [--workspace <name>] [--new-window] [--
 - `open-tab.sh` 报 target window did not become frontmost — `--workspace` 目标窗口在另一个 Space，`set index` 无法激活：切到目标桌面再调用，或改用 `--new-window`
 - `open-tab.sh` 很慢 — daemon 未启动或扩展未连接：脚本已自动调用 `ensure-webbridge.sh`；若仍慢，检查 Edge 扩展是否启用或升级 webbridge
 - daemon 端口在但 HTTP 不响应 — daemon hang：`rm -f ~/.kimi-webbridge/daemon.pid && ~/.kimi-webbridge/bin/kimi-webbridge start`，等扩展重连
-- `find_tab`/`evaluate` 报 `no tab ... in this session` 且 `list_tabs` 恒空（ensure-webbridge 显示 extension_connected:true 也一样）— session 注册表绑定的是已关闭的旧 tab/窗口，悬空死锁：先 `open -a "Microsoft Edge"` 拉起窗口（AppleScript 单开 tab 无法被该 session 重新发现，别走弯路），再重试 `open-tab.sh --url <url> --session <name> --current-window`，navigate 模式落进新窗口即完成重绑
+- `find_tab`/`evaluate` 报 `no tab ... in this session` 且 `list_tabs` 恒空（ensure-webbridge 显示 extension_connected:true 也一样）— session 注册表绑定的是已关闭的旧 tab/窗口，悬空死锁：先 `open -a "Microsoft Edge"` 拉起窗口（AppleScript 单开 tab 无法被该 session 重新发现，别走弯路），再重试 `open-tab.sh --url <url> --session <name> --current-window`；仍反复报 `tab was closed`（连 navigate 刚返回的新 tabId 也立即失效）则注册表已中毒，**换一个全新 session 名**重来（旧 session 名的注册条目洗不干净，daemon restart 也未必能救）
+- 打开本地 dev 页面前端口靠猜必翻车 — `lsof` 会撞上 preview/其他服务的端口（如 vite preview 4173/4177）：**先读项目 `package.json` 的 dev script 确认端口**（如 `rg '"dev' package.json`），再拼 URL；workspace 绑定可存 cwd→dev 站点映射减少重复查
+- 测量 vShow/`display:none` 元素几何 — rect 全零（元素未显示）：临时 `el.style.display='block'` 强制显示后测，测完复原 `el.style.display=''`；注意区分「库自管显隐」（复原即可，下次状态切换自动接管）与「需要真实触发条件」（如滚动条 thumb 需先滚动才显示）
 
 ### 其他提示
 
